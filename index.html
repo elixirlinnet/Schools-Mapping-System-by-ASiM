@@ -3,66 +3,131 @@
 <head>
   <title>Schools Mapping System by ASiM</title>
 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f6fa;
+      background: #f1f2f6;
       margin: 0;
     }
 
+    /* Header */
     .header {
-      background: #2f3542;
+      background: #1e272e;
       color: white;
-      padding: 10px 15px;
+      padding: 12px;
+      text-align: center;
     }
 
     .header h2 {
       margin: 0;
+      font-size: 18px;
     }
 
     .header p {
       margin: 2px 0 0;
-      font-size: 13px;
-      color: #dcdde1;
+      font-size: 12px;
+      color: #d2dae2;
     }
 
+    /* Controls */
     .controls {
-      padding: 10px;
       background: #ffffff;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
       border-bottom: 1px solid #ddd;
     }
 
-    select, input, button {
-      margin: 5px;
-      padding: 5px;
+    .row {
+      display: flex;
+      gap: 6px;
     }
 
+    input, select, button {
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #1e90ff;
+    }
+
+    button {
+      background: #1e272e;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #485460;
+    }
+
+    .btn-secondary {
+      background: #57606f;
+    }
+
+    /* Map */
     #map {
-      height: 600px;
+      height: calc(100vh - 200px);
+    }
+
+    /* Desktop view */
+    @media (min-width: 768px) {
+      .controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .row {
+        width: auto;
+      }
+
+      input {
+        width: 200px;
+      }
+
+      select {
+        width: 150px;
+      }
+
+      button {
+        width: auto;
+      }
     }
   </style>
 </head>
+
 <body>
 
 <div class="header">
   <h2>Schools Mapping System by ASiM</h2>
-  <p>DEA Khushab – ASiM</p>
+  <p>DEA Khushab – Field Monitoring</p>
 </div>
 
 <div class="controls">
 
-  <input type="text" id="searchBox" placeholder="Search school...">
-  <button onclick="searchSchool()">Search</button>
-  <button onclick="clearSearch()">Clear</button>
+  <div class="row">
+    <input type="text" id="searchBox" placeholder="Search school...">
+    <button onclick="searchSchool()">Search</button>
+    <button class="btn-secondary" onclick="clearSearch()">Clear</button>
+  </div>
 
-  <br>
-
-  <select id="levelFilter"><option value="all">All Levels</option></select>
-  <select id="genderFilter"><option value="all">All Gender</option></select>
-  <select id="categoryFilter"><option value="all">All Categories</option></select>
-  <select id="markazFilter"><option value="all">All Markaz</option></select>
+  <div class="row">
+    <select id="levelFilter"><option value="all">All Levels</option></select>
+    <select id="genderFilter"><option value="all">All Gender</option></select>
+    <select id="categoryFilter"><option value="all">All Categories</option></select>
+    <select id="markazFilter"><option value="all">All Markaz</option></select>
+  </div>
 
 </div>
 
@@ -71,9 +136,10 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-// Map
-var map = L.map('map').setView([32.08, 72.67], 10);
+// Map (no fixed center)
+var map = L.map('map');
 
+// Tile
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
 // Icons
@@ -119,54 +185,48 @@ fetch('schools.csv')
           });
 
         }
-
       }
-
     });
 
     populateFilters();
     showSchools();
-
   });
 
 // Populate filters
 function populateFilters(){
 
-  var levels = new Set();
-  var genders = new Set();
-  var categories = new Set();
-  var markazs = new Set();
+  var sets = {
+    levelFilter:new Set(),
+    genderFilter:new Set(),
+    categoryFilter:new Set(),
+    markazFilter:new Set()
+  };
 
-  schools.forEach(function(s){
-    levels.add(s.level);
-    genders.add(s.gender);
-    categories.add(s.category);
-    markazs.add(s.markaz);
+  schools.forEach(s=>{
+    sets.levelFilter.add(s.level);
+    sets.genderFilter.add(s.gender);
+    sets.categoryFilter.add(s.category);
+    sets.markazFilter.add(s.markaz);
   });
 
-  function fill(id, values){
-    var d = document.getElementById(id);
-    values.forEach(function(v){
-      var o = document.createElement("option");
-      o.value = v;
-      o.text = v;
+  Object.keys(sets).forEach(id=>{
+    var d=document.getElementById(id);
+    sets[id].forEach(v=>{
+      var o=document.createElement("option");
+      o.value=v;
+      o.text=v;
       d.appendChild(o);
     });
-  }
-
-  fill("levelFilter", levels);
-  fill("genderFilter", genders);
-  fill("categoryFilter", categories);
-  fill("markazFilter", markazs);
+  });
 }
 
-// Show schools
+// Show schools with AUTO CENTER
 function showSchools(){
 
-  var l = levelFilter.value;
-  var g = genderFilter.value;
-  var c = categoryFilter.value;
-  var m = markazFilter.value;
+  var l=levelFilter.value,
+      g=genderFilter.value,
+      c=categoryFilter.value,
+      m=markazFilter.value;
 
   map.eachLayer(function(layer){
     if(layer instanceof L.Marker){
@@ -174,12 +234,14 @@ function showSchools(){
     }
   });
 
+  var bounds = [];
+
   schools.forEach(function(s){
 
-    if (
-      (l==="all"||s.level===l) &&
-      (g==="all"||s.gender===g) &&
-      (c==="all"||s.category===c) &&
+    if(
+      (l==="all"||s.level===l)&&
+      (g==="all"||s.gender===g)&&
+      (c==="all"||s.category===c)&&
       (m==="all"||s.markaz===m)
     ){
 
@@ -191,26 +253,28 @@ function showSchools(){
           s.name+"<br>"+s.level+"<br>"+s.gender+"<br>"+s.category+"<br>Markaz: "+s.markaz
         );
 
+      bounds.push([s.lat, s.lng]);
     }
-
   });
+
+  // Smart centering
+  if(bounds.length > 1){
+    map.fitBounds(bounds);
+  } else if(bounds.length === 1){
+    map.setView(bounds[0], 14); // fixed zoom for single point
+  }
 }
 
-// Search
+// Search (kept same but improved centering)
 function searchSchool(){
 
-  var q = document.getElementById("searchBox").value.trim().toLowerCase();
+  var q=searchBox.value.trim().toLowerCase();
 
-  if(q === ""){
-    showSchools();
-    return;
-  }
+  if(q===""){ showSchools(); return; }
 
-  var results = schools.filter(function(s){
-    return s.name.toLowerCase().includes(q);
-  });
+  var results=schools.filter(s=>s.name.toLowerCase().includes(q));
 
-  if(results.length > 0){
+  if(results.length){
 
     map.eachLayer(function(layer){
       if(layer instanceof L.Marker){
@@ -218,61 +282,59 @@ function searchSchool(){
       }
     });
 
-    var bounds = [];
+    var bounds=[];
 
-    results.forEach(function(s){
-
-      var icon = s.gender==="Female"?redIcon:blueIcon;
+    results.forEach(s=>{
+      var icon=s.gender==="Female"?redIcon:blueIcon;
 
       L.marker([s.lat,s.lng],{icon:icon})
         .addTo(map)
         .bindPopup(s.name);
 
-      bounds.push([s.lat, s.lng]);
-
+      bounds.push([s.lat,s.lng]);
     });
 
-    map.fitBounds(bounds);
+    if(bounds.length > 1){
+      map.fitBounds(bounds);
+    } else {
+      map.setView(bounds[0], 14);
+    }
 
-  } else {
-    alert("No matching school found");
-  }
+  } else alert("No matching school found");
 }
 
-// Clear search
+// Clear
 function clearSearch(){
-  document.getElementById("searchBox").value = "";
+  searchBox.value="";
   showSchools();
 }
 
-// Click for coordinates + add school
+// Coordinates
 map.on('click', function(e){
 
-  var lat = e.latlng.lat.toFixed(6);
-  var lng = e.latlng.lng.toFixed(6);
+  var lat=e.latlng.lat.toFixed(6);
+  var lng=e.latlng.lng.toFixed(6);
 
   L.popup()
     .setLatLng(e.latlng)
     .setContent(
-      "Latitude: " + lat + "<br>" +
-      "Longitude: " + lng +
-      "<br><br><button onclick='copyCoords(\"" + lat + "," + lng + "\")'>Copy</button>"
+      "Latitude: "+lat+"<br>Longitude: "+lng+
+      "<br><br><button onclick='copyCoords(\""+lat+","+lng+"\")'>Copy</button>"
     )
     .openOn(map);
 
 });
 
-// Copy function
-function copyCoords(text){
-  navigator.clipboard.writeText(text);
-  alert("Copied: " + text);
+function copyCoords(t){
+  navigator.clipboard.writeText(t);
+  alert("Copied: "+t);
 }
 
 // Events
-levelFilter.onchange = showSchools;
-genderFilter.onchange = showSchools;
-categoryFilter.onchange = showSchools;
-markazFilter.onchange = showSchools;
+levelFilter.onchange=showSchools;
+genderFilter.onchange=showSchools;
+categoryFilter.onchange=showSchools;
+markazFilter.onchange=showSchools;
 
 </script>
 
