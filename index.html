@@ -2,109 +2,114 @@
 <html>
 <head>
   <title>Schools Mapping System by ASiM</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f1f2f6;
-      margin: 0;
-    }
+    body { margin:0; font-family:Arial; background:#f1f2f6; }
 
     .header {
-      background: #1e272e;
-      color: white;
-      padding: 12px;
-      text-align: center;
+      background:#1e272e; color:white;
+      padding:12px; text-align:center;
     }
 
     .controls {
-      background: #ffffff;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      border-bottom: 1px solid #ddd;
+      background:white; padding:10px;
+      display:flex; flex-direction:column;
+      gap:8px; border-bottom:1px solid #ddd;
     }
 
-    .row { display: flex; gap: 6px; }
+    .row { display:flex; gap:6px; }
 
-    input, button {
-      padding: 10px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      width: 100%;
+    input,button {
+      padding:10px; font-size:14px;
+      border-radius:6px; border:1px solid #ccc;
+      width:100%;
     }
+    .dropdown-content input[type="checkbox"] {
+  width: auto;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
 
     button {
-      background: #1e272e;
-      color: white;
-      border: none;
-      cursor: pointer;
+      background:#1e272e; color:white;
+      border:none; cursor:pointer;
     }
 
-    .btn-secondary { background: #57606f; }
+    .btn-secondary { background:#57606f; }
 
-    /* Dropdown filters */
-    .dropdown {
-  position: relative;
-  width: 100%;
-}
-@media (max-width: 600px) {
-  .dropdown-content {
-    width: 100%;
-    left: 0;
-  }
-}
+    .dropdown { position:relative; width:100%; }
+
     .dropdown-content {
-  display: none;
-  position: absolute;
-  background: white;
-  border: 1px solid #ccc;
-  max-height: 250px;
-  overflow-y: auto;
-  z-index: 1000;
+      display:none;
+      position:absolute;
+      background:white;
+      border:1px solid #ccc;
+      max-height:250px;
+      overflow-y:auto;
+      width:100%;
+      padding:6px;
+      z-index:1000;
+    }
+
+.dropdown-content label {
+  display: block;
+  font-size: 13px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+.dropdown-content label:hover {
+  background: #f1f2f6;
+}
+.dropdown-content label {
+  display: inline-block;
+  font-size: 13px;
+  padding: 4px 6px;
+  cursor: pointer;
   width: 100%;
-  min-width: 150px;
-  box-sizing: border-box;
-  padding: 6px;
+}
+.dropdown-content input[type="checkbox"] {
+  margin-right: 6px;
+  margin-left: 0;
+  vertical-align: middle;
 }
 
-    .dropdown-content label {
-      display: block;
-      font-size: 13px;
-    }
     .dropdown-content button {
-  width: 100%;
-  margin-bottom: 4px;
-  padding: 5px;
-  font-size: 12px;
-}
-
-    /* Map */
-    #map {
-      height: calc(100vh - 260px);
+      width:100%;
+      margin-bottom:4px;
+      padding:5px;
+      font-size:12px;
     }
 
-    /* Stats */
+    #map {
+      height:calc(100vh - 260px);
+    }
+
     .stats {
-      background: #fff;
-      padding: 10px;
-      font-size: 13px;
-      border-top: 1px solid #ddd;
+      background:white;
+      padding:10px;
+      font-size:13px;
+      border-top:1px solid #ddd;
+    }
+
+    .leaflet-tooltip {
+      background:transparent;
+      border:none;
+      box-shadow:none;
+      font-size:11px;
+      font-weight:bold;
     }
   </style>
 </head>
 
 <body>
 
-<div class="header">
+<<div class="header">
   <h2>Schools Mapping System by ASiM</h2>
-  <p>DEA Khushab – Field Monitoring</p>
+  <p id="subtitle">DEA Khushab – ASiM</p>
 </div>
 
 <div class="controls">
@@ -147,21 +152,36 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
+
+function updateSubtitle(stats){
+
+  var selectedMarkaz = getSelected("markazFilterBox");
+
+  var text = `Showing ${stats.total} schools`;
+
+  if(selectedMarkaz.length > 0){
+    text += " | Markaz: " + selectedMarkaz.join(", ");
+  }
+
+  document.getElementById("subtitle").innerText = text;
+}
 var map = L.map('map');
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
 var blueIcon = new L.Icon({
-  iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-  iconSize: [32, 32]
+  iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+  iconSize:[32,32]
 });
 
 var redIcon = new L.Icon({
-  iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-  iconSize: [32, 32]
+  iconUrl:'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+  iconSize:[32,32]
 });
 
 var schools = [];
+var markers = [];
 
+// LOAD DATA
 fetch('schools.csv')
 .then(r => r.text())
 .then(data => {
@@ -172,18 +192,18 @@ fetch('schools.csv')
     var c = row.split(",");
 
     if(c.length >= 7){
-      var lat = parseFloat(c[1].trim());
-      var lng = parseFloat(c[2].trim());
+      var lat = parseFloat(c[1]);
+      var lng = parseFloat(c[2]);
 
       if(!isNaN(lat) && !isNaN(lng)){
         schools.push({
-          name:c[0].trim(),
+          name:c[0],
           lat:lat,
           lng:lng,
-          level:c[3].trim(),
-          gender:c[4].trim(),
-          category:c[5].trim(),
-          markaz:c[6].trim()
+          level:c[3],
+          gender:c[4],
+          category:c[5],
+          markaz:c[6]
         });
       }
     }
@@ -193,6 +213,7 @@ fetch('schools.csv')
   showSchools();
 });
 
+// FILTERS
 function populateFilters(){
 
   var sets = {
@@ -210,71 +231,73 @@ function populateFilters(){
   });
 
   Object.keys(sets).forEach(id=>{
-    var container = document.getElementById(id);
 
     var container = document.getElementById(id);
 
-// Add buttons
-var btnAll = document.createElement("button");
-btnAll.textContent = "Select All";
-btnAll.onclick = function(){
-  container.querySelectorAll("input").forEach(cb => cb.checked = true);
-  showSchools();
-};
+    var btnAll = document.createElement("button");
+    btnAll.textContent = "Select All";
+    btnAll.onclick = function(){
+      container.querySelectorAll("input").forEach(cb => cb.checked = true);
+      showSchools();
+    };
 
-var btnNone = document.createElement("button");
-btnNone.textContent = "Clear All";
-btnNone.onclick = function(){
-  container.querySelectorAll("input").forEach(cb => cb.checked = false);
-  showSchools();
-};
+    var btnNone = document.createElement("button");
+    btnNone.textContent = "Clear All";
+    btnNone.onclick = function(){
+      container.querySelectorAll("input").forEach(cb => cb.checked = false);
+      showSchools();
+    };
 
-container.appendChild(btnAll);
-container.appendChild(btnNone);
+    container.appendChild(btnAll);
+    container.appendChild(btnNone);
 
-// Add checkboxes
-sets[id].forEach(val=>{
-  var label = document.createElement("label");
+    sets[id].forEach(val=>{
+    var label = document.createElement("label");
 
-  var cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.value = val;
-  cb.checked = true;
-  cb.onchange = showSchools;
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = val;
+    cb.checked = true;
+    cb.onchange = showSchools;
 
-  label.appendChild(cb);
-  label.append(" " + val);
+label.appendChild(cb);
+label.append(" " + val);
 
-  container.appendChild(label);
-});
+      container.appendChild(label);
+    });
+
   });
 }
 
 function getSelected(id){
-  var arr=[];
-  document.querySelectorAll(`#${id} input:checked`)
-    .forEach(cb=>arr.push(cb.value));
-  return arr;
+  return [...document.querySelectorAll(`#${id} input:checked`)]
+    .map(x=>x.value);
 }
 
+// MAIN MAP
 function showSchools(){
+
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
 
   var Ls = getSelected("levelFilterBox");
   var Gs = getSelected("genderFilterBox");
   var Cs = getSelected("categoryFilterBox");
   var Ms = getSelected("markazFilterBox");
 
-  map.eachLayer(l=>{
-    if(l instanceof L.Marker) map.removeLayer(l);
-  });
-
   var bounds=[];
-  var stats={
-    total:0,male:0,female:0,
-    primary:0,middle:0,secondary:0,
-    sed:0,psrp1:0,psrp2:0,
-    markaz:{}
-  };
+  var stats = {
+  total:0,
+  male:0,
+  female:0,
+  primary:0,
+  middle:0,
+  secondary:0,
+  sed:0,
+  psrp1:0,
+  psrp2:0,
+  markaz:{}
+};
 
   schools.forEach(s=>{
 
@@ -286,36 +309,118 @@ function showSchools(){
     ){
 
       stats.total++;
-
       if(s.gender==="Male") stats.male++;
-      if(s.gender==="Female") stats.female++;
+if(s.gender==="Female") stats.female++;
 
-      if(s.level==="Primary") stats.primary++;
-      if(s.level==="Middle") stats.middle++;
-      if(s.level==="Secondary") stats.secondary++;
+if(s.level==="Primary") stats.primary++;
+if(s.level==="Middle") stats.middle++;
+if(s.level==="Secondary") stats.secondary++;
 
-      if(s.category==="SED") stats.sed++;
-      if(s.category==="PSRP-I") stats.psrp1++;
-      if(s.category==="PSRP-II") stats.psrp2++;
+if(s.category==="SED") stats.sed++;
+if(s.category==="PSRP-I") stats.psrp1++;
+if(s.category==="PSRP-II") stats.psrp2++;
 
-      stats.markaz[s.markaz]=(stats.markaz[s.markaz]||0)+1;
+stats.markaz[s.markaz] = (stats.markaz[s.markaz] || 0) + 1;
 
-      var icon = s.gender==="Female"?redIcon:blueIcon;
+      var icon = s.gender==="Female" ? redIcon : blueIcon;
 
-      L.marker([s.lat,s.lng],{icon})
+      var marker = L.marker([s.lat,s.lng],{icon})
         .addTo(map)
-        .bindPopup(s.name);
+        .bindPopup(
+          "<b>"+s.name+"</b><br>"+
+          "Level: "+s.level+"<br>"+
+          "Gender: "+s.gender+"<br>"+
+          "Category: "+s.category+"<br>"+
+          "Markaz: "+s.markaz+"<br>"+
+          "Lat: "+s.lat+"<br>"+
+          "Lng: "+s.lng+"<br>"+
+          "<button onclick=\"copyCoords('"+s.lat+","+s.lng+"')\">Copy</button>"
+        )
+        .bindTooltip(s.name,{permanent:false});
 
+      markers.push(marker);
       bounds.push([s.lat,s.lng]);
     }
+
   });
 
   if(bounds.length>1) map.fitBounds(bounds);
   else if(bounds.length===1) map.setView(bounds[0],14);
 
   updateStats(stats);
+  updateLabels();
 }
 
+// LABEL CONTROL
+function updateLabels(){
+  var zoom = map.getZoom();
+
+  markers.forEach(m=>{
+    if(zoom >= 13) m.openTooltip();
+    else m.closeTooltip();
+  });
+}
+
+map.on("zoomend", updateLabels);
+
+// SEARCH
+function searchSchool(){
+
+  var q = searchBox.value.toLowerCase();
+
+  if(!q){
+    showSchools();
+    return;
+  }
+
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+
+  schools.forEach(s=>{
+    if(s.name.toLowerCase().includes(q)){
+      var m = L.marker([s.lat,s.lng])
+        .addTo(map)
+        .bindPopup(s.name)
+        .bindTooltip(s.name,{permanent:false});
+      markers.push(m);
+    }
+  });
+
+  updateLabels();
+}
+
+function clearSearch(){
+  searchBox.value="";
+  showSchools();
+}
+
+// DROPDOWN
+function toggleDropdown(id){
+
+  var el = document.getElementById(id);
+  var isOpen = el.style.display === "block";
+
+  document.querySelectorAll(".dropdown-content")
+    .forEach(d => d.style.display = "none");
+
+  if(!isOpen){
+    el.style.display = "block";
+  }
+}
+
+document.addEventListener("click", function(e){
+  if(!e.target.closest(".dropdown")){
+    document.querySelectorAll(".dropdown-content")
+      .forEach(d => d.style.display = "none");
+  }
+});
+
+// COPY
+function copyCoords(t){
+  navigator.clipboard.writeText(t);
+}
+
+// STATS
 function updateStats(s){
 
   var genderTotal = s.male + s.female;
@@ -349,76 +454,6 @@ function updateStats(s){
   document.getElementById("statsBox").innerHTML = html;
 }
 
-function searchSchool(){
-  var q = searchBox.value.trim().toLowerCase();
-  if(q===""){showSchools();return;}
-
-  var res = schools.filter(s=>s.name.toLowerCase().includes(q));
-
-  map.eachLayer(l=>{
-    if(l instanceof L.Marker) map.removeLayer(l);
-  });
-
-  var b=[];
-  res.forEach(s=>{
-    L.marker([s.lat,s.lng]).addTo(map).bindPopup(s.name);
-    b.push([s.lat,s.lng]);
-  });
-
-  if(b.length>1) map.fitBounds(b);
-  else if(b.length===1) map.setView(b[0],14);
-}
-
-function clearSearch(){
-  searchBox.value="";
-  showSchools();
-}
-
-function toggleDropdown(id){
-
-  var el = document.getElementById(id);
-
-  var isOpen = el.style.display === "block";
-
-  // Close all dropdowns
-  document.querySelectorAll(".dropdown-content")
-    .forEach(d => d.style.display = "none");
-
-  // If it was NOT open, open it
-  if(!isOpen){
-    el.style.display = "block";
-  }
-
-}
-
-map.on('click',e=>{
-  var lat=e.latlng.lat.toFixed(6);
-  var lng=e.latlng.lng.toFixed(6);
-
-  L.popup()
-    .setLatLng(e.latlng)
-    .setContent(
-      `Lat: ${lat}<br>Lng: ${lng}<br>
-      <button onclick="copyCoords('${lat},${lng}')">Copy</button>`
-    )
-    .openOn(map);
-});
-
-function copyCoords(t){
-  navigator.clipboard.writeText(t);
-  
-}
-document.addEventListener("click", function(e){
-
-  const isButton = e.target.closest(".dropdown button");
-  const isContent = e.target.closest(".dropdown-content");
-
-  if(!isButton && !isContent){
-    document.querySelectorAll(".dropdown-content")
-      .forEach(d => d.style.display = "none");
-  }
-
-});
 </script>
 
 </body>
