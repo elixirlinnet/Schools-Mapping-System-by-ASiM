@@ -14,7 +14,6 @@
       margin: 0;
     }
 
-    /* Header */
     .header {
       background: #1e272e;
       color: white;
@@ -22,18 +21,6 @@
       text-align: center;
     }
 
-    .header h2 {
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .header p {
-      margin: 2px 0 0;
-      font-size: 12px;
-      color: #d2dae2;
-    }
-
-    /* Controls */
     .controls {
       background: #ffffff;
       padding: 10px;
@@ -43,22 +30,14 @@
       border-bottom: 1px solid #ddd;
     }
 
-    .row {
-      display: flex;
-      gap: 6px;
-    }
+    .row { display: flex; gap: 6px; }
 
-    input, select, button {
+    input, button {
       padding: 10px;
       font-size: 14px;
       border-radius: 6px;
       border: 1px solid #ccc;
       width: 100%;
-    }
-
-    input:focus, select:focus {
-      outline: none;
-      border-color: #1e90ff;
     }
 
     button {
@@ -68,41 +47,55 @@
       cursor: pointer;
     }
 
-    button:hover {
-      background: #485460;
-    }
+    .btn-secondary { background: #57606f; }
 
-    .btn-secondary {
-      background: #57606f;
+    /* Dropdown filters */
+    .dropdown {
+  position: relative;
+  width: 100%;
+}
+@media (max-width: 600px) {
+  .dropdown-content {
+    width: 100%;
+    left: 0;
+  }
+}
+    .dropdown-content {
+  display: none;
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  width: 100%;
+  min-width: 150px;
+  box-sizing: border-box;
+  padding: 6px;
+}
+
+    .dropdown-content label {
+      display: block;
+      font-size: 13px;
     }
+    .dropdown-content button {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 5px;
+  font-size: 12px;
+}
 
     /* Map */
     #map {
-      height: calc(100vh - 200px);
+      height: calc(100vh - 260px);
     }
 
-    /* Desktop view */
-    @media (min-width: 768px) {
-      .controls {
-        flex-direction: row;
-        flex-wrap: wrap;
-      }
-
-      .row {
-        width: auto;
-      }
-
-      input {
-        width: 200px;
-      }
-
-      select {
-        width: 150px;
-      }
-
-      button {
-        width: auto;
-      }
+    /* Stats */
+    .stats {
+      background: #fff;
+      padding: 10px;
+      font-size: 13px;
+      border-top: 1px solid #ddd;
     }
   </style>
 </head>
@@ -123,26 +116,40 @@
   </div>
 
   <div class="row">
-    <select id="levelFilter"><option value="all">All Levels</option></select>
-    <select id="genderFilter"><option value="all">All Gender</option></select>
-    <select id="categoryFilter"><option value="all">All Categories</option></select>
-    <select id="markazFilter"><option value="all">All Markaz</option></select>
+
+    <div class="dropdown">
+      <button onclick="toggleDropdown('levelFilterBox')">Level ▼</button>
+      <div id="levelFilterBox" class="dropdown-content"></div>
+    </div>
+
+    <div class="dropdown">
+      <button onclick="toggleDropdown('genderFilterBox')">Gender ▼</button>
+      <div id="genderFilterBox" class="dropdown-content"></div>
+    </div>
+
+    <div class="dropdown">
+      <button onclick="toggleDropdown('categoryFilterBox')">Category ▼</button>
+      <div id="categoryFilterBox" class="dropdown-content"></div>
+    </div>
+
+    <div class="dropdown">
+      <button onclick="toggleDropdown('markazFilterBox')">Markaz ▼</button>
+      <div id="markazFilterBox" class="dropdown-content"></div>
+    </div>
+
   </div>
 
 </div>
 
 <div id="map"></div>
+<div class="stats" id="statsBox"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-// Map (no fixed center)
 var map = L.map('map');
-
-// Tile
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// Icons
 var blueIcon = new L.Icon({
   iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
   iconSize: [32, 32]
@@ -153,189 +160,265 @@ var redIcon = new L.Icon({
   iconSize: [32, 32]
 });
 
-// Data
 var schools = [];
 
-// Load CSV
 fetch('schools.csv')
-  .then(response => response.text())
-  .then(data => {
+.then(r => r.text())
+.then(data => {
 
-    var rows = data.split("\n");
+  var rows = data.split("\n");
 
-    rows.slice(1).forEach(function(row){
+  rows.slice(1).forEach(row => {
+    var c = row.split(",");
 
-      var cols = row.split(",");
+    if(c.length >= 7){
+      var lat = parseFloat(c[1].trim());
+      var lng = parseFloat(c[2].trim());
 
-      if(cols.length >= 7){
-
-        var lat = parseFloat(cols[1].trim());
-        var lng = parseFloat(cols[2].trim());
-
-        if(!isNaN(lat) && !isNaN(lng)){
-
-          schools.push({
-            name: cols[0].trim(),
-            lat: lat,
-            lng: lng,
-            level: cols[3].trim(),
-            gender: cols[4].trim(),
-            category: cols[5].trim(),
-            markaz: cols[6].trim()
-          });
-
-        }
+      if(!isNaN(lat) && !isNaN(lng)){
+        schools.push({
+          name:c[0].trim(),
+          lat:lat,
+          lng:lng,
+          level:c[3].trim(),
+          gender:c[4].trim(),
+          category:c[5].trim(),
+          markaz:c[6].trim()
+        });
       }
-    });
-
-    populateFilters();
-    showSchools();
+    }
   });
 
-// Populate filters
+  populateFilters();
+  showSchools();
+});
+
 function populateFilters(){
 
   var sets = {
-    levelFilter:new Set(),
-    genderFilter:new Set(),
-    categoryFilter:new Set(),
-    markazFilter:new Set()
+    levelFilterBox:new Set(),
+    genderFilterBox:new Set(),
+    categoryFilterBox:new Set(),
+    markazFilterBox:new Set()
   };
 
   schools.forEach(s=>{
-    sets.levelFilter.add(s.level);
-    sets.genderFilter.add(s.gender);
-    sets.categoryFilter.add(s.category);
-    sets.markazFilter.add(s.markaz);
+    sets.levelFilterBox.add(s.level);
+    sets.genderFilterBox.add(s.gender);
+    sets.categoryFilterBox.add(s.category);
+    sets.markazFilterBox.add(s.markaz);
   });
 
   Object.keys(sets).forEach(id=>{
-    var d=document.getElementById(id);
-    sets[id].forEach(v=>{
-      var o=document.createElement("option");
-      o.value=v;
-      o.text=v;
-      d.appendChild(o);
-    });
+    var container = document.getElementById(id);
+
+    var container = document.getElementById(id);
+
+// Add buttons
+var btnAll = document.createElement("button");
+btnAll.textContent = "Select All";
+btnAll.onclick = function(){
+  container.querySelectorAll("input").forEach(cb => cb.checked = true);
+  showSchools();
+};
+
+var btnNone = document.createElement("button");
+btnNone.textContent = "Clear All";
+btnNone.onclick = function(){
+  container.querySelectorAll("input").forEach(cb => cb.checked = false);
+  showSchools();
+};
+
+container.appendChild(btnAll);
+container.appendChild(btnNone);
+
+// Add checkboxes
+sets[id].forEach(val=>{
+  var label = document.createElement("label");
+
+  var cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.value = val;
+  cb.checked = true;
+  cb.onchange = showSchools;
+
+  label.appendChild(cb);
+  label.append(" " + val);
+
+  container.appendChild(label);
+});
   });
 }
 
-// Show schools with AUTO CENTER
+function getSelected(id){
+  var arr=[];
+  document.querySelectorAll(`#${id} input:checked`)
+    .forEach(cb=>arr.push(cb.value));
+  return arr;
+}
+
 function showSchools(){
 
-  var l=levelFilter.value,
-      g=genderFilter.value,
-      c=categoryFilter.value,
-      m=markazFilter.value;
+  var Ls = getSelected("levelFilterBox");
+  var Gs = getSelected("genderFilterBox");
+  var Cs = getSelected("categoryFilterBox");
+  var Ms = getSelected("markazFilterBox");
 
-  map.eachLayer(function(layer){
-    if(layer instanceof L.Marker){
-      map.removeLayer(layer);
-    }
+  map.eachLayer(l=>{
+    if(l instanceof L.Marker) map.removeLayer(l);
   });
 
-  var bounds = [];
+  var bounds=[];
+  var stats={
+    total:0,male:0,female:0,
+    primary:0,middle:0,secondary:0,
+    sed:0,psrp1:0,psrp2:0,
+    markaz:{}
+  };
 
-  schools.forEach(function(s){
+  schools.forEach(s=>{
 
     if(
-      (l==="all"||s.level===l)&&
-      (g==="all"||s.gender===g)&&
-      (c==="all"||s.category===c)&&
-      (m==="all"||s.markaz===m)
+      Ls.includes(s.level) &&
+      Gs.includes(s.gender) &&
+      Cs.includes(s.category) &&
+      Ms.includes(s.markaz)
     ){
+
+      stats.total++;
+
+      if(s.gender==="Male") stats.male++;
+      if(s.gender==="Female") stats.female++;
+
+      if(s.level==="Primary") stats.primary++;
+      if(s.level==="Middle") stats.middle++;
+      if(s.level==="Secondary") stats.secondary++;
+
+      if(s.category==="SED") stats.sed++;
+      if(s.category==="PSRP-I") stats.psrp1++;
+      if(s.category==="PSRP-II") stats.psrp2++;
+
+      stats.markaz[s.markaz]=(stats.markaz[s.markaz]||0)+1;
 
       var icon = s.gender==="Female"?redIcon:blueIcon;
 
-      L.marker([s.lat,s.lng],{icon:icon})
-        .addTo(map)
-        .bindPopup(
-          s.name+"<br>"+s.level+"<br>"+s.gender+"<br>"+s.category+"<br>Markaz: "+s.markaz
-        );
-
-      bounds.push([s.lat, s.lng]);
-    }
-  });
-
-  // Smart centering
-  if(bounds.length > 1){
-    map.fitBounds(bounds);
-  } else if(bounds.length === 1){
-    map.setView(bounds[0], 14); // fixed zoom for single point
-  }
-}
-
-// Search (kept same but improved centering)
-function searchSchool(){
-
-  var q=searchBox.value.trim().toLowerCase();
-
-  if(q===""){ showSchools(); return; }
-
-  var results=schools.filter(s=>s.name.toLowerCase().includes(q));
-
-  if(results.length){
-
-    map.eachLayer(function(layer){
-      if(layer instanceof L.Marker){
-        map.removeLayer(layer);
-      }
-    });
-
-    var bounds=[];
-
-    results.forEach(s=>{
-      var icon=s.gender==="Female"?redIcon:blueIcon;
-
-      L.marker([s.lat,s.lng],{icon:icon})
+      L.marker([s.lat,s.lng],{icon})
         .addTo(map)
         .bindPopup(s.name);
 
       bounds.push([s.lat,s.lng]);
-    });
-
-    if(bounds.length > 1){
-      map.fitBounds(bounds);
-    } else {
-      map.setView(bounds[0], 14);
     }
+  });
 
-  } else alert("No matching school found");
+  if(bounds.length>1) map.fitBounds(bounds);
+  else if(bounds.length===1) map.setView(bounds[0],14);
+
+  updateStats(stats);
 }
 
-// Clear
+function updateStats(s){
+
+  var genderTotal = s.male + s.female;
+  var levelTotal = s.primary + s.middle + s.secondary;
+  var categoryTotal = s.sed + s.psrp1 + s.psrp2;
+
+  var html = `
+  <b>Total Schools:</b> ${s.total}<br><br>
+
+  <b>Gender Total (${genderTotal}):</b><br>
+  Male: ${s.male}<br>
+  Female: ${s.female}<br><br>
+
+  <b>Level Total (${levelTotal}):</b><br>
+  Primary: ${s.primary}<br>
+  Middle: ${s.middle}<br>
+  Secondary: ${s.secondary}<br><br>
+
+  <b>Category Total (${categoryTotal}):</b><br>
+  SED: ${s.sed}<br>
+  PSRP-I: ${s.psrp1}<br>
+  PSRP-II: ${s.psrp2}<br><br>
+
+  <b>Markaz-wise Total (${s.total}):</b><br>
+  `;
+
+  for(var m in s.markaz){
+    html += `${m}: ${s.markaz[m]}<br>`;
+  }
+
+  document.getElementById("statsBox").innerHTML = html;
+}
+
+function searchSchool(){
+  var q = searchBox.value.trim().toLowerCase();
+  if(q===""){showSchools();return;}
+
+  var res = schools.filter(s=>s.name.toLowerCase().includes(q));
+
+  map.eachLayer(l=>{
+    if(l instanceof L.Marker) map.removeLayer(l);
+  });
+
+  var b=[];
+  res.forEach(s=>{
+    L.marker([s.lat,s.lng]).addTo(map).bindPopup(s.name);
+    b.push([s.lat,s.lng]);
+  });
+
+  if(b.length>1) map.fitBounds(b);
+  else if(b.length===1) map.setView(b[0],14);
+}
+
 function clearSearch(){
   searchBox.value="";
   showSchools();
 }
 
-// Coordinates
-map.on('click', function(e){
+function toggleDropdown(id){
 
+  var el = document.getElementById(id);
+
+  var isOpen = el.style.display === "block";
+
+  // Close all dropdowns
+  document.querySelectorAll(".dropdown-content")
+    .forEach(d => d.style.display = "none");
+
+  // If it was NOT open, open it
+  if(!isOpen){
+    el.style.display = "block";
+  }
+
+}
+
+map.on('click',e=>{
   var lat=e.latlng.lat.toFixed(6);
   var lng=e.latlng.lng.toFixed(6);
 
   L.popup()
     .setLatLng(e.latlng)
     .setContent(
-      "Latitude: "+lat+"<br>Longitude: "+lng+
-      "<br><br><button onclick='copyCoords(\""+lat+","+lng+"\")'>Copy</button>"
+      `Lat: ${lat}<br>Lng: ${lng}<br>
+      <button onclick="copyCoords('${lat},${lng}')">Copy</button>`
     )
     .openOn(map);
-
 });
 
 function copyCoords(t){
   navigator.clipboard.writeText(t);
-  alert("Copied: "+t);
+  
 }
+document.addEventListener("click", function(e){
 
-// Events
-levelFilter.onchange=showSchools;
-genderFilter.onchange=showSchools;
-categoryFilter.onchange=showSchools;
-markazFilter.onchange=showSchools;
+  const isButton = e.target.closest(".dropdown button");
+  const isContent = e.target.closest(".dropdown-content");
 
+  if(!isButton && !isContent){
+    document.querySelectorAll(".dropdown-content")
+      .forEach(d => d.style.display = "none");
+  }
+
+});
 </script>
 
 </body>
