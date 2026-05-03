@@ -251,25 +251,22 @@ map.on('click', function(e){
   var lat = e.latlng.lat.toFixed(6);
   var lng = e.latlng.lng.toFixed(6);
 
-  var name = prompt("Enter School Name:");
-  if(!name) return;
-
-  var level = prompt("Enter Level:");
-  var gender = prompt("Enter Gender:");
-  var category = prompt("Enter Category:");
-  var markaz = prompt("Enter Markaz:");
-
-  var newData = name + "," + lat + "," + lng + "," + level + "," + gender + "," + category + "," + markaz;
-
-  L.marker([lat, lng])
-    .addTo(map)
-    .bindPopup(name)
-    .openPopup();
-
-  navigator.clipboard.writeText(newData);
-  alert("Copied:\n" + newData);
+  L.popup()
+    .setLatLng(e.latlng)
+    .setContent(
+      "Latitude: " + lat + "<br>" +
+      "Longitude: " + lng +
+      "<br><br><button onclick='copyCoords(\"" + lat + "," + lng + "\")'>Copy</button>"
+    )
+    .openOn(map);
 
 });
+
+// Copy function
+function copyCoords(text){
+  navigator.clipboard.writeText(text);
+  alert("Copied: " + text);
+}
 
 // Events
 levelFilter.onchange = showSchools;
