@@ -251,8 +251,7 @@ function populateFilters(){
     container.appendChild(btnAll);
     container.appendChild(btnNone);
 
-    sets[id].forEach(val=>{
-    var label = document.createElement("label");
+[...sets[id]].sort().forEach(val=>{    var label = document.createElement("label");
 
     var cb = document.createElement("input");
     cb.type = "checkbox";
