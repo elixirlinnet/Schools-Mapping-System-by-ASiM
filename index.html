@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Schools Mapping System by ASiM</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f6fa;
+      margin: 0;
+    }
+
+    .header {
+      background: #2f3542;
+      color: white;
+      padding: 10px 15px;
+    }
+
+    .header h2 {
+      margin: 0;
+    }
+
+    .header p {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: #dcdde1;
+    }
+
+    .controls {
+      padding: 10px;
+      background: #ffffff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    select, input, button {
+      margin: 5px;
+      padding: 5px;
+    }
+
+    #map {
+      height: 600px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h2>Schools Mapping System by ASiM</h2>
+  <p>DEA Khushab – ASiM</p>
+</div>
+
+<div class="controls">
+
+  <input type="text" id="searchBox" placeholder="Search school...">
+  <button onclick="searchSchool()">Search</button>
+  <button onclick="clearSearch()">Clear</button>
+
+  <br>
+
+  <select id="levelFilter"><option value="all">All Levels</option></select>
+  <select id="genderFilter"><option value="all">All Gender</option></select>
+  <select id="categoryFilter"><option value="all">All Categories</option></select>
+  <select id="markazFilter"><option value="all">All Markaz</option></select>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+// Map
+var map = L.map('map').setView([32.08, 72.67], 10);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+// Icons
+var blueIcon = new L.Icon({
+  iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+  iconSize: [32, 32]
+});
+
+var redIcon = new L.Icon({
+  iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+  iconSize: [32, 32]
+});
+
+// Data
+var schools = [];
+
+// Load CSV
+fetch('schools.csv')
+  .then(response => response.text())
+  .then(data => {
+
+    var rows = data.split("\n");
+
+    rows.slice(1).forEach(function(row){
+
+      var cols = row.split(",");
+
+      if(cols.length >= 7){
+
+        var lat = parseFloat(cols[1].trim());
+        var lng = parseFloat(cols[2].trim());
+
+        if(!isNaN(lat) && !isNaN(lng)){
+
+          schools.push({
+            name: cols[0].trim(),
+            lat: lat,
+            lng: lng,
+            level: cols[3].trim(),
+            gender: cols[4].trim(),
+            category: cols[5].trim(),
+            markaz: cols[6].trim()
+          });
+
+        }
+
+      }
+
+    });
+
+    populateFilters();
+    showSchools();
+
+  });
+
+// Populate filters
+function populateFilters(){
+
+  var levels = new Set();
+  var genders = new Set();
+  var categories = new Set();
+  var markazs = new Set();
+
+  schools.forEach(function(s){
+    levels.add(s.level);
+    genders.add(s.gender);
+    categories.add(s.category);
+    markazs.add(s.markaz);
+  });
+
+  function fill(id, values){
+    var d = document.getElementById(id);
+    values.forEach(function(v){
+      var o = document.createElement("option");
+      o.value = v;
+      o.text = v;
+      d.appendChild(o);
+    });
+  }
+
+  fill("levelFilter", levels);
+  fill("genderFilter", genders);
+  fill("categoryFilter", categories);
+  fill("markazFilter", markazs);
+}
+
+// Show schools
+function showSchools(){
+
+  var l = levelFilter.value;
+  var g = genderFilter.value;
+  var c = categoryFilter.value;
+  var m = markazFilter.value;
+
+  map.eachLayer(function(layer){
+    if(layer instanceof L.Marker){
+      map.removeLayer(layer);
+    }
+  });
+
+  schools.forEach(function(s){
+
+    if (
+      (l==="all"||s.level===l) &&
+      (g==="all"||s.gender===g) &&
+      (c==="all"||s.category===c) &&
+      (m==="all"||s.markaz===m)
+    ){
+
+      var icon = s.gender==="Female"?redIcon:blueIcon;
+
+      L.marker([s.lat,s.lng],{icon:icon})
+        .addTo(map)
+        .bindPopup(
+          s.name+"<br>"+s.level+"<br>"+s.gender+"<br>"+s.category+"<br>Markaz: "+s.markaz
+        );
+
+    }
+
+  });
+}
+
+// Search
+function searchSchool(){
+
+  var q = document.getElementById("searchBox").value.trim().toLowerCase();
+
+  if(q === ""){
+    showSchools();
+    return;
+  }
+
+  var results = schools.filter(function(s){
+    return s.name.toLowerCase().includes(q);
+  });
+
+  if(results.length > 0){
+
+    map.eachLayer(function(layer){
+      if(layer instanceof L.Marker){
+        map.removeLayer(layer);
+      }
+    });
+
+    var bounds = [];
+
+    results.forEach(function(s){
+
+      var icon = s.gender==="Female"?redIcon:blueIcon;
+
+      L.marker([s.lat,s.lng],{icon:icon})
+        .addTo(map)
+        .bindPopup(s.name);
+
+      bounds.push([s.lat, s.lng]);
+
+    });
+
+    map.fitBounds(bounds);
+
+  } else {
+    alert("No matching school found");
+  }
+}
+
+// Clear search
+function clearSearch(){
+  document.getElementById("searchBox").value = "";
+  showSchools();
+}
+
+// Click for coordinates + add school
+map.on('click', function(e){
+
+  var lat = e.latlng.lat.toFixed(6);
+  var lng = e.latlng.lng.toFixed(6);
+
+  var name = prompt("Enter School Name:");
+  if(!name) return;
+
+  var level = prompt("Enter Level:");
+  var gender = prompt("Enter Gender:");
+  var category = prompt("Enter Category:");
+  var markaz = prompt("Enter Markaz:");
+
+  var newData = name + "," + lat + "," + lng + "," + level + "," + gender + "," + category + "," + markaz;
+
+  L.marker([lat, lng])
+    .addTo(map)
+    .bindPopup(name)
+    .openPopup();
+
+  navigator.clipboard.writeText(newData);
+  alert("Copied:\n" + newData);
+
+});
+
+// Events
+levelFilter.onchange = showSchools;
+genderFilter.onchange = showSchools;
+categoryFilter.onchange = showSchools;
+markazFilter.onchange = showSchools;
+
+</script>
+
+</body>
+</html>
