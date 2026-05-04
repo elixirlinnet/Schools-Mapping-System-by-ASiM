@@ -102,12 +102,39 @@
       font-size:11px;
       font-weight:bold;
     }
+
+    #legend {
+  position: absolute;
+  bottom: 20px;
+  right: 10px;
+  background: white;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
   </style>
 </head>
 
 <body>
 
-<<div class="header">
+<div class="header">
   <h2>Schools Mapping System by ASiM</h2>
   <p id="subtitle">DEA Khushab – ASiM</p>
 </div>
@@ -147,39 +174,88 @@
 </div>
 
 <div id="map"></div>
+<div id="legend"></div>
 <div class="stats" id="statsBox"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-function updateSubtitle(stats){
 
-  var selectedMarkaz = getSelected("markazFilterBox");
-
-  var text = `Showing ${stats.total} schools`;
-
-  if(selectedMarkaz.length > 0){
-    text += " | Markaz: " + selectedMarkaz.join(", ");
-  }
-
-  document.getElementById("subtitle").innerText = text;
-}
 var map = L.map('map');
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+map.on('click', function(e){
 
-var blueIcon = new L.Icon({
-  iconUrl:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-  iconSize:[32,32]
+  var lat = e.latlng.lat.toFixed(6);
+  var lng = e.latlng.lng.toFixed(6);
+
+  var popupContent = `
+    <b>Coordinates</b><br>
+    Lat: ${lat}<br>
+    Lng: ${lng}<br><br>
+    <button onclick="copyCoords('${lat},${lng}')">Copy</button>
+  `;
+
+  L.popup()
+    .setLatLng(e.latlng)
+    .setContent(popupContent)
+    .openOn(map);
 });
 
-var redIcon = new L.Icon({
-  iconUrl:'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-  iconSize:[32,32]
-});
+var markazColors = {};
 
+var orderedMarkaz = [];
 var schools = [];
 var markers = [];
+var markazColors = {};
+
+
+
+function getColor(markaz){
+
+  if(!markazColors[markaz]){
+    var index = orderedMarkaz.indexOf(markaz);
+    var hue = (index * 137) % 360;
+    markazColors[markaz] = `hsl(${hue}, 65%, 45%)`;
+  }
+
+  return markazColors[markaz];
+}
+function updateLegend(){
+
+  var legend = document.getElementById("legend");
+
+  if(!legend) return;
+
+  legend.innerHTML = "<b>Markaz</b><br>";
+
+  // SAFELY get selected checkboxes
+  var checkboxes = document.querySelectorAll("#markazFilterBox input:checked");
+
+  if(checkboxes.length === 0){
+    legend.innerHTML += "<i>No Markaz selected</i>";
+    return;
+  }
+
+  checkboxes.forEach(function(cb){
+
+    var m = cb.value;
+
+    if(markazColors[m]){
+      var color = markazColors[m];
+
+      legend.innerHTML += `
+        <div class="legend-item">
+          <div class="legend-color" style="background:${color}"></div>
+          ${m}
+        </div>
+      `;
+    }
+
+  });
+}
+
+  
 
 // LOAD DATA
 fetch('schools.csv')
@@ -209,8 +285,12 @@ fetch('schools.csv')
     }
   });
 
-  populateFilters();
-  showSchools();
+
+
+orderedMarkaz = [...new Set(schools.map(s => s.markaz))].sort();
+
+populateFilters();
+showSchools();
 });
 
 // FILTERS
@@ -248,23 +328,7 @@ function populateFilters(){
       showSchools();
     };
 
-map.on('click', function(e){
 
-  var lat = e.latlng.lat.toFixed(6);
-  var lng = e.latlng.lng.toFixed(6);
-
-  var popupContent = `
-    <b>Coordinates</b><br>
-    Lat: ${lat}<br>
-    Lng: ${lng}<br><br>
-    <button onclick="copyCoords('${lat},${lng}')">Copy</button>
-  `;
-
-  L.popup()
-    .setLatLng(e.latlng)
-    .setContent(popupContent)
-    .openOn(map);
-});
     container.appendChild(btnAll);
     container.appendChild(btnNone);
 
@@ -338,21 +402,26 @@ if(s.category==="PSRP-II") stats.psrp2++;
 
 stats.markaz[s.markaz] = (stats.markaz[s.markaz] || 0) + 1;
 
-      var icon = s.gender==="Female" ? redIcon : blueIcon;
+var color = getColor(s.markaz);
 
-      var marker = L.marker([s.lat,s.lng],{icon})
-        .addTo(map)
-        .bindPopup(
-          "<b>"+s.name+"</b><br>"+
-          "Level: "+s.level+"<br>"+
-          "Gender: "+s.gender+"<br>"+
-          "Category: "+s.category+"<br>"+
-          "Markaz: "+s.markaz+"<br>"+
-          "Lat: "+s.lat+"<br>"+
-          "Lng: "+s.lng+"<br>"+
-          "<button onclick=\"copyCoords('"+s.lat+","+s.lng+"')\">Copy</button>"
-        )
-        .bindTooltip(s.name,{permanent:false});
+var marker = L.circleMarker([s.lat, s.lng], {
+  radius: 7,
+  fillColor: color,
+  color: "#000",
+  weight: 1,
+  fillOpacity: 0.9
+})
+.addTo(map)
+.bindPopup(
+  "<b>"+s.name+"</b><br>"+
+  "Markaz: "+s.markaz+"<br>"+
+  "Level: "+s.level+"<br>"+
+  "Gender: "+s.gender+"<br>"+
+  "Category: "+s.category+"<br>"+
+  "Lat: "+s.lat+"<br>"+
+  "Lng: "+s.lng
+)
+.bindTooltip(s.name,{permanent:false});
 
       markers.push(marker);
       bounds.push([s.lat,s.lng]);
@@ -365,6 +434,7 @@ stats.markaz[s.markaz] = (stats.markaz[s.markaz] || 0) + 1;
 
   updateStats(stats);
   updateLabels();
+  updateLegend();
 }
 
 // LABEL CONTROL
