@@ -248,6 +248,23 @@ function populateFilters(){
       showSchools();
     };
 
+map.on('click', function(e){
+
+  var lat = e.latlng.lat.toFixed(6);
+  var lng = e.latlng.lng.toFixed(6);
+
+  var popupContent = `
+    <b>Coordinates</b><br>
+    Lat: ${lat}<br>
+    Lng: ${lng}<br><br>
+    <button onclick="copyCoords('${lat},${lng}')">Copy</button>
+  `;
+
+  L.popup()
+    .setLatLng(e.latlng)
+    .setContent(popupContent)
+    .openOn(map);
+});
     container.appendChild(btnAll);
     container.appendChild(btnNone);
 
