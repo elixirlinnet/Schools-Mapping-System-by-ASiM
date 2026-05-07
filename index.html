@@ -150,8 +150,13 @@
   <div class="row">
 
     <div class="dropdown">
-      <button onclick="toggleDropdown('levelFilterBox')">Level ▼</button>
-      <div id="levelFilterBox" class="dropdown-content"></div>
+  <button onclick="toggleDropdown('tehsilFilterBox')">Tehsil ▼</button>
+  <div id="tehsilFilterBox" class="dropdown-content"></div>
+</div>
+
+<div class="dropdown">
+      <button onclick="toggleDropdown('markazFilterBox')">Markaz ▼</button>
+      <div id="markazFilterBox" class="dropdown-content"></div>
     </div>
 
     <div class="dropdown">
@@ -160,14 +165,17 @@
     </div>
 
     <div class="dropdown">
+      <button onclick="toggleDropdown('levelFilterBox')">Level ▼</button>
+      <div id="levelFilterBox" class="dropdown-content"></div>
+    </div>
+
+    <div class="dropdown">
       <button onclick="toggleDropdown('categoryFilterBox')">Category ▼</button>
       <div id="categoryFilterBox" class="dropdown-content"></div>
     </div>
 
-    <div class="dropdown">
-      <button onclick="toggleDropdown('markazFilterBox')">Markaz ▼</button>
-      <div id="markazFilterBox" class="dropdown-content"></div>
-    </div>
+    
+
 
   </div>
 
@@ -267,20 +275,21 @@ fetch('schools.csv')
   rows.slice(1).forEach(row => {
     var c = row.split(",");
 
-    if(c.length >= 7){
-      var lat = parseFloat(c[1]);
-      var lng = parseFloat(c[2]);
+    if(c.length >= 8){
+      var lat = parseFloat(c[6]);
+      var lng = parseFloat(c[7]);
 
       if(!isNaN(lat) && !isNaN(lng)){
         schools.push({
-          name:c[0],
-          lat:lat,
-          lng:lng,
-          level:c[3],
-          gender:c[4],
-          category:c[5],
-          markaz:c[6]
-        });
+  tehsil:c[0],
+  markaz:c[1],
+  name:c[2],
+  gender:c[3],
+  level:c[4],
+  category:c[5],
+  lat:lat,
+  lng:lng
+});
       }
     }
   });
@@ -297,17 +306,19 @@ showSchools();
 function populateFilters(){
 
   var sets = {
-    levelFilterBox:new Set(),
-    genderFilterBox:new Set(),
-    categoryFilterBox:new Set(),
-    markazFilterBox:new Set()
-  };
+  levelFilterBox:new Set(),
+  genderFilterBox:new Set(),
+  categoryFilterBox:new Set(),
+  markazFilterBox:new Set(),
+  tehsilFilterBox:new Set()
+};
 
   schools.forEach(s=>{
+    sets.tehsilFilterBox.add(s.tehsil);
+    sets.markazFilterBox.add(s.markaz);
     sets.levelFilterBox.add(s.level);
     sets.genderFilterBox.add(s.gender);
     sets.categoryFilterBox.add(s.category);
-    sets.markazFilterBox.add(s.markaz);
   });
 
   Object.keys(sets).forEach(id=>{
@@ -360,6 +371,7 @@ function showSchools(){
   markers.forEach(m => map.removeLayer(m));
   markers = [];
 
+  var Ts = getSelected("tehsilFilterBox");
   var Ls = getSelected("levelFilterBox");
   var Gs = getSelected("genderFilterBox");
   var Cs = getSelected("categoryFilterBox");
@@ -385,8 +397,9 @@ function showSchools(){
       Ls.includes(s.level) &&
       Gs.includes(s.gender) &&
       Cs.includes(s.category) &&
-      Ms.includes(s.markaz)
-    ){
+      Ms.includes(s.markaz) &&
+      Ts.includes(s.tehsil)
+        ){
 
       stats.total++;
       if(s.gender==="Male") stats.male++;
@@ -414,12 +427,19 @@ var marker = L.circleMarker([s.lat, s.lng], {
 .addTo(map)
 .bindPopup(
   "<b>"+s.name+"</b><br>"+
+  "Tehsil: "+s.tehsil+"<br>"+
   "Markaz: "+s.markaz+"<br>"+
   "Level: "+s.level+"<br>"+
   "Gender: "+s.gender+"<br>"+
   "Category: "+s.category+"<br>"+
   "Lat: "+s.lat+"<br>"+
-  "Lng: "+s.lng
+  "Lng: "+s.lng+"<br><br>"+
+
+  "<a href='https://www.google.com/maps/dir/?api=1&destination="
+  +s.lat+","+s.lng+
+  "' target='_blank'>" +
+
+  "<button style='padding:6px 10px; cursor:pointer;'>Open in Google Maps</button></a>"
 )
 .bindTooltip(s.name,{permanent:false});
 
