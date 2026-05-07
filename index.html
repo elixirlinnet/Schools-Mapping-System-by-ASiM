@@ -3,564 +3,758 @@
 <head>
   <title>Schools Mapping System by ASiM</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 
   <style>
-    body { margin:0; font-family:Arial; background:#f1f2f6; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f2f6;
+    }
 
     .header {
-      background:#1e272e; color:white;
-      padding:12px; text-align:center;
+      background: #1e272e;
+      color: white;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .header h2,
+    .header p {
+      margin: 0;
+    }
+
+    .header p {
+      margin-top: 4px;
+      font-size: 14px;
     }
 
     .controls {
-      background:white; padding:10px;
-      display:flex; flex-direction:column;
-      gap:8px; border-bottom:1px solid #ddd;
+      background: white;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-bottom: 1px solid #ddd;
     }
 
-    .row { display:flex; gap:6px; }
-
-    input,button {
-      padding:10px; font-size:14px;
-      border-radius:6px; border:1px solid #ccc;
-      width:100%;
+    .row {
+      display: flex;
+      gap: 6px;
     }
-    .dropdown-content input[type="checkbox"] {
-  width: auto;
-  display: inline-block;
-  margin-right: 6px;
-  vertical-align: middle;
-}
+
+    input,
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
 
     button {
-      background:#1e272e; color:white;
-      border:none; cursor:pointer;
+      background: #1e272e;
+      color: white;
+      border: none;
+      cursor: pointer;
     }
 
-    .btn-secondary { background:#57606f; }
+    .btn-secondary {
+      background: #57606f;
+    }
 
-    .dropdown { position:relative; width:100%; }
+    .dropdown {
+      position: relative;
+      width: 100%;
+    }
 
     .dropdown-content {
-      display:none;
-      position:absolute;
-      background:white;
-      border:1px solid #ccc;
-      max-height:250px;
-      overflow-y:auto;
-      width:100%;
-      padding:6px;
-      z-index:1000;
+      display: none;
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      max-height: 250px;
+      overflow-y: auto;
+      width: 100%;
+      padding: 6px;
+      z-index: 1000;
+      box-sizing: border-box;
     }
 
-.dropdown-content label {
-  display: block;
-  font-size: 13px;
-  padding: 4px 6px;
-  cursor: pointer;
-}
-.dropdown-content label:hover {
-  background: #f1f2f6;
-}
-.dropdown-content label {
-  display: inline-block;
-  font-size: 13px;
-  padding: 4px 6px;
-  cursor: pointer;
-  width: 100%;
-}
-.dropdown-content input[type="checkbox"] {
-  margin-right: 6px;
-  margin-left: 0;
-  vertical-align: middle;
-}
-
     .dropdown-content button {
-      width:100%;
-      margin-bottom:4px;
-      padding:5px;
-      font-size:12px;
+      width: 100%;
+      margin-bottom: 4px;
+      padding: 5px;
+      font-size: 12px;
+    }
+
+    .dropdown-content label {
+      display: block;
+      width: 100%;
+      padding: 4px 6px;
+      font-size: 13px;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .dropdown-content label:hover {
+      background: #f1f2f6;
+    }
+
+    .dropdown-content input[type="checkbox"] {
+      width: auto;
+      display: inline-block;
+      margin: 0 6px 0 0;
+      vertical-align: middle;
     }
 
     #map {
-      height:calc(100vh - 260px);
+      height: calc(100vh - 260px);
+      min-height: 320px;
     }
 
     .stats {
-      background:white;
-      padding:10px;
-      font-size:13px;
-      border-top:1px solid #ddd;
+      background: white;
+      padding: 10px;
+      font-size: 13px;
+      border-top: 1px solid #ddd;
     }
 
     .leaflet-tooltip {
-      background:transparent;
-      border:none;
-      box-shadow:none;
-      font-size:11px;
-      font-weight:bold;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      font-size: 11px;
+      font-weight: bold;
     }
 
     #legend {
-  position: absolute;
-  bottom: 20px;
-  right: 10px;
-  background: white;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 12px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 1000;
-}
+      position: absolute;
+      right: 10px;
+      bottom: 20px;
+      background: white;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+    }
 
-.legend-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 4px;
-}
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
 
-.legend-color {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  margin-right: 6px;
-}
+    .legend-color {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 6px;
+      flex: 0 0 auto;
+    }
+
+    .popup-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .popup-actions button {
+      white-space: nowrap;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
   </style>
 </head>
 
 <body>
-
-<div class="header">
-  <h2>Schools Mapping System by ASiM</h2>
-  <p id="subtitle">DEA Khushab – ASiM</p>
-</div>
-
-<div class="controls">
-
-  <div class="row">
-    <input type="text" id="searchBox" placeholder="Search school...">
-    <button onclick="searchSchool()">Search</button>
-    <button class="btn-secondary" onclick="clearSearch()">Clear</button>
+  <div class="header">
+    <h2>Schools Mapping System by ASiM</h2>
+    <p id="subtitle">DEA Khushab - ASiM</p>
   </div>
 
-  <div class="row">
-
-    <div class="dropdown">
-  <button onclick="toggleDropdown('tehsilFilterBox')">Tehsil ▼</button>
-  <div id="tehsilFilterBox" class="dropdown-content"></div>
-</div>
-
-<div class="dropdown">
-      <button onclick="toggleDropdown('markazFilterBox')">Markaz ▼</button>
-      <div id="markazFilterBox" class="dropdown-content"></div>
+  <div class="controls">
+    <div class="row">
+      <input type="text" id="searchBox" placeholder="Search school...">
+      <button onclick="searchSchool()">Search</button>
+      <button class="btn-secondary" onclick="clearSearch()">Clear</button>
     </div>
 
-    <div class="dropdown">
-      <button onclick="toggleDropdown('genderFilterBox')">Gender ▼</button>
-      <div id="genderFilterBox" class="dropdown-content"></div>
+    <div class="row">
+      <div class="dropdown">
+        <button onclick="toggleDropdown('tehsilFilterBox')">Tehsil &#9662;</button>
+        <div id="tehsilFilterBox" class="dropdown-content"></div>
+      </div>
+
+      <div class="dropdown">
+        <button onclick="toggleDropdown('markazFilterBox')">Markaz &#9662;</button>
+        <div id="markazFilterBox" class="dropdown-content"></div>
+      </div>
+
+      <div class="dropdown">
+        <button onclick="toggleDropdown('genderFilterBox')">Gender &#9662;</button>
+        <div id="genderFilterBox" class="dropdown-content"></div>
+      </div>
+
+      <div class="dropdown">
+        <button onclick="toggleDropdown('levelFilterBox')">Level &#9662;</button>
+        <div id="levelFilterBox" class="dropdown-content"></div>
+      </div>
+
+      <div class="dropdown">
+        <button onclick="toggleDropdown('categoryFilterBox')">Category &#9662;</button>
+        <div id="categoryFilterBox" class="dropdown-content"></div>
+      </div>
     </div>
-
-    <div class="dropdown">
-      <button onclick="toggleDropdown('levelFilterBox')">Level ▼</button>
-      <div id="levelFilterBox" class="dropdown-content"></div>
-    </div>
-
-    <div class="dropdown">
-      <button onclick="toggleDropdown('categoryFilterBox')">Category ▼</button>
-      <div id="categoryFilterBox" class="dropdown-content"></div>
-    </div>
-
-    
-
-
   </div>
 
-</div>
+  <div id="map"></div>
+  <div id="legend"></div>
+  <div class="stats" id="statsBox"></div>
 
-<div id="map"></div>
-<div id="legend"></div>
-<div class="stats" id="statsBox"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<script>
-
-
-var map = L.map('map');
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-map.on('click', function(e){
-
-  var lat = e.latlng.lat.toFixed(6);
-  var lng = e.latlng.lng.toFixed(6);
-
-  var popupContent = `
-    <b>Coordinates</b><br>
-    Lat: ${lat}<br>
-    Lng: ${lng}<br><br>
-    <button onclick="copyCoords('${lat},${lng}')">Copy</button>
-  `;
-
-  L.popup()
-    .setLatLng(e.latlng)
-    .setContent(popupContent)
-    .openOn(map);
-});
-
-var markazColors = {};
-
-var orderedMarkaz = [];
-var schools = [];
-var markers = [];
-var markazColors = {};
-
-
-
-function getColor(markaz){
-
-  if(!markazColors[markaz]){
-    var index = orderedMarkaz.indexOf(markaz);
-    var hue = (index * 137) % 360;
-    markazColors[markaz] = `hsl(${hue}, 65%, 45%)`;
-  }
-
-  return markazColors[markaz];
-}
-function updateLegend(){
-
-  var legend = document.getElementById("legend");
-
-  if(!legend) return;
-
-  legend.innerHTML = "<b>Markaz</b><br>";
-
-  // SAFELY get selected checkboxes
-  var checkboxes = document.querySelectorAll("#markazFilterBox input:checked");
-
-  if(checkboxes.length === 0){
-    legend.innerHTML += "<i>No Markaz selected</i>";
-    return;
-  }
-
-  checkboxes.forEach(function(cb){
-
-    var m = cb.value;
-
-    if(markazColors[m]){
-      var color = markazColors[m];
-
-      legend.innerHTML += `
-        <div class="legend-item">
-          <div class="legend-color" style="background:${color}"></div>
-          ${m}
-        </div>
-      `;
-    }
-
-  });
-}
-
-  
-
-// LOAD DATA
-fetch('schools.csv')
-.then(r => r.text())
-.then(data => {
-
-  var rows = data.split("\n");
-
-  rows.slice(1).forEach(row => {
-    var c = row.split(",");
-
-    if(c.length >= 8){
-      var lat = parseFloat(c[6]);
-      var lng = parseFloat(c[7]);
-
-      if(!isNaN(lat) && !isNaN(lng)){
-        schools.push({
-  tehsil:c[0],
-  markaz:c[1],
-  name:c[2],
-  gender:c[3],
-  level:c[4],
-  category:c[5],
-  lat:lat,
-  lng:lng
-});
-      }
-    }
-  });
-
-
-
-orderedMarkaz = [...new Set(schools.map(s => s.markaz))].sort();
-
-populateFilters();
-showSchools();
-});
-
-// FILTERS
-function populateFilters(){
-
-  var sets = {
-  levelFilterBox:new Set(),
-  genderFilterBox:new Set(),
-  categoryFilterBox:new Set(),
-  markazFilterBox:new Set(),
-  tehsilFilterBox:new Set()
-};
-
-  schools.forEach(s=>{
-    sets.tehsilFilterBox.add(s.tehsil);
-    sets.markazFilterBox.add(s.markaz);
-    sets.levelFilterBox.add(s.level);
-    sets.genderFilterBox.add(s.gender);
-    sets.categoryFilterBox.add(s.category);
-  });
-
-  Object.keys(sets).forEach(id=>{
-
-    var container = document.getElementById(id);
-
-    var btnAll = document.createElement("button");
-    btnAll.textContent = "Select All";
-    btnAll.onclick = function(){
-      container.querySelectorAll("input").forEach(cb => cb.checked = true);
-      showSchools();
-    };
-
-    var btnNone = document.createElement("button");
-    btnNone.textContent = "Clear All";
-    btnNone.onclick = function(){
-      container.querySelectorAll("input").forEach(cb => cb.checked = false);
-      showSchools();
-    };
-
-
-    container.appendChild(btnAll);
-    container.appendChild(btnNone);
-
-[...sets[id]].sort().forEach(val=>{    var label = document.createElement("label");
-
-    var cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.value = val;
-    cb.checked = true;
-    cb.onchange = showSchools;
-
-label.appendChild(cb);
-label.append(" " + val);
-
-      container.appendChild(label);
+  <script>
+    var map = L.map("map", {
+      zoomControl: false
     });
 
-  });
-}
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-function getSelected(id){
-  return [...document.querySelectorAll(`#${id} input:checked`)]
-    .map(x=>x.value);
-}
+    L.control.zoom({
+      position: "bottomleft"
+    }).addTo(map);
 
-// MAIN MAP
-function showSchools(){
+    var orderedMarkaz = [];
+    var schools = [];
+    var markers = [];
+    var markazColors = {};
 
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
+    map.on("click", function(e){
+      var lat = e.latlng.lat.toFixed(6);
+      var lng = e.latlng.lng.toFixed(6);
 
-  var Ts = getSelected("tehsilFilterBox");
-  var Ls = getSelected("levelFilterBox");
-  var Gs = getSelected("genderFilterBox");
-  var Cs = getSelected("categoryFilterBox");
-  var Ms = getSelected("markazFilterBox");
+      var popupContent = `
+        <b>Coordinates</b><br>
+        Lat: ${lat}<br>
+        Lng: ${lng}<br><br>
+        <div class="popup-actions">
+          <button onclick="copyCoords('${lat},${lng}')">Copy</button>
+          <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank">
+            <button>Open in Google Maps</button>
+          </a>
+        </div>
+      `;
 
-  var bounds=[];
-  var stats = {
-  total:0,
-  male:0,
-  female:0,
-  primary:0,
-  middle:0,
-  secondary:0,
-  sed:0,
-  psrp1:0,
-  psrp2:0,
-  markaz:{}
-};
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent(popupContent)
+        .openOn(map);
+    });
 
-  schools.forEach(s=>{
+    fetch("schools.csv")
+      .then(response => response.text())
+      .then(data => {
+        var rows = parseCsv(data);
 
-    if(
-      Ls.includes(s.level) &&
-      Gs.includes(s.gender) &&
-      Cs.includes(s.category) &&
-      Ms.includes(s.markaz) &&
-      Ts.includes(s.tehsil)
+        rows.slice(1).forEach(row => {
+          var c = row.map(value => value.trim());
+
+          if(c.length >= 8){
+            var lat = parseFloat(c[6]);
+            var lng = parseFloat(c[7]);
+
+            if(!isNaN(lat) && !isNaN(lng)){
+              schools.push({
+                tehsil: c[0],
+                markaz: c[1],
+                name: c[2],
+                gender: c[3],
+                level: c[4],
+                category: c[5],
+                lat: lat,
+                lng: lng
+              });
+            }
+          }
+        });
+
+        orderedMarkaz = [...new Set(schools.map(s => s.markaz))].sort();
+
+        populateFilters();
+        updateMarkazFilter();
+        showSchools();
+      })
+      .catch(error => {
+        document.getElementById("statsBox").innerHTML =
+          "Unable to load schools.csv: " + error.message;
+      });
+
+    function parseCsv(text){
+      var rows = [];
+      var row = [];
+      var value = "";
+      var inQuotes = false;
+
+      for(var i = 0; i < text.length; i++){
+        var ch = text[i];
+        var next = text[i + 1];
+
+        if(ch === '"' && inQuotes && next === '"'){
+          value += '"';
+          i++;
+        }
+        else if(ch === '"'){
+          inQuotes = !inQuotes;
+        }
+        else if(ch === "," && !inQuotes){
+          row.push(value);
+          value = "";
+        }
+        else if((ch === "\n" || ch === "\r") && !inQuotes){
+          if(ch === "\r" && next === "\n") i++;
+          row.push(value);
+
+          if(row.some(cell => cell.trim() !== "")){
+            rows.push(row);
+          }
+
+          row = [];
+          value = "";
+        }
+        else{
+          value += ch;
+        }
+      }
+
+      row.push(value);
+
+      if(row.some(cell => cell.trim() !== "")){
+        rows.push(row);
+      }
+
+      return rows;
+    }
+
+    function populateFilters(){
+      var sets = {
+        tehsilFilterBox: new Set(),
+        markazFilterBox: new Set(),
+        genderFilterBox: new Set(),
+        levelFilterBox: new Set(),
+        categoryFilterBox: new Set()
+      };
+
+      schools.forEach(s => {
+        sets.tehsilFilterBox.add(s.tehsil);
+        sets.markazFilterBox.add(s.markaz);
+        sets.genderFilterBox.add(s.gender);
+        sets.levelFilterBox.add(s.level);
+        sets.categoryFilterBox.add(s.category);
+      });
+
+      Object.keys(sets).forEach(id => {
+        var container = document.getElementById(id);
+
+        addFilterButtons(container, function(){
+          if(id === "tehsilFilterBox"){
+            updateMarkazFilter();
+          }
+
+          showSchools();
+        });
+
+        [...sets[id]].sort().forEach(val => {
+          addCheckbox(container, val, true, function(){
+            if(id === "tehsilFilterBox"){
+              updateMarkazFilter();
+            }
+
+            showSchools();
+          });
+        });
+      });
+    }
+
+    function addFilterButtons(container, onChange){
+      var btnAll = document.createElement("button");
+      btnAll.textContent = "Select All";
+      btnAll.onclick = function(){
+        container.querySelectorAll("input").forEach(cb => cb.checked = true);
+        onChange();
+      };
+
+      var btnNone = document.createElement("button");
+      btnNone.textContent = "Clear All";
+      btnNone.onclick = function(){
+        container.querySelectorAll("input").forEach(cb => cb.checked = false);
+        onChange();
+      };
+
+      container.appendChild(btnAll);
+      container.appendChild(btnNone);
+    }
+
+    function addCheckbox(container, value, checked, onChange){
+      var label = document.createElement("label");
+      var cb = document.createElement("input");
+
+      cb.type = "checkbox";
+      cb.value = value;
+      cb.checked = checked;
+      cb.onchange = onChange;
+
+      label.appendChild(cb);
+      label.append(" " + value);
+      container.appendChild(label);
+    }
+
+    function getSelected(id){
+      return [...document.querySelectorAll("#" + id + " input:checked")]
+        .map(x => x.value);
+    }
+
+    function updateMarkazFilter(){
+      var selectedTehsils = getSelected("tehsilFilterBox");
+      var selectedMarkaz = new Set(getSelected("markazFilterBox"));
+      var markazContainer = document.getElementById("markazFilterBox");
+
+      markazContainer.innerHTML = "";
+
+      addFilterButtons(markazContainer, function(){
+        syncTehsilWithMarkaz();
+        showSchools();
+      });
+
+      var filteredMarkaz = new Set();
+
+      schools.forEach(s => {
+        if(selectedTehsils.includes(s.tehsil)){
+          filteredMarkaz.add(s.markaz);
+        }
+      });
+
+      [...filteredMarkaz].sort().forEach(val => {
+        var shouldKeepSelection = selectedMarkaz.size === 0 || selectedMarkaz.has(val);
+
+        addCheckbox(markazContainer, val, shouldKeepSelection, function(){
+          syncTehsilWithMarkaz();
+          showSchools();
+        });
+      });
+    }
+
+    function syncTehsilWithMarkaz(){
+      var selectedMarkaz = getSelected("markazFilterBox");
+      var tehsilCheckboxes = document.querySelectorAll("#tehsilFilterBox input");
+
+      tehsilCheckboxes.forEach(function(cb){
+        var tehsil = cb.value;
+
+        cb.checked = schools.some(function(s){
+          return s.tehsil === tehsil && selectedMarkaz.includes(s.markaz);
+        });
+      });
+    }
+
+    function getColor(markaz, tehsil){
+      if(!markazColors[markaz]){
+        var selectedTehsils = getSelected("tehsilFilterBox");
+        var index = orderedMarkaz.indexOf(markaz);
+
+        if(selectedTehsils.length <= 1){
+          var hue = (index * 137) % 360;
+          markazColors[markaz] = `hsl(${hue}, 70%, 45%)`;
+        }
+        else{
+          var baseHue = 0;
+
+          if(tehsil === "KHUSHAB") baseHue = 220;
+          else if(tehsil === "NOORPUR") baseHue = 120;
+          else if(tehsil === "QUAIDABAD") baseHue = 0;
+          else if(tehsil === "NAUSHEHRA") baseHue = 280;
+
+          var lightness = 35 + ((index * 7) % 30);
+          markazColors[markaz] = `hsl(${baseHue}, 65%, ${lightness}%)`;
+        }
+      }
+
+      return markazColors[markaz];
+    }
+
+    function showSchools(){
+      clearMarkers();
+      markazColors = {};
+
+      var selectedTehsils = getSelected("tehsilFilterBox");
+      var selectedLevels = getSelected("levelFilterBox");
+      var selectedGenders = getSelected("genderFilterBox");
+      var selectedCategories = getSelected("categoryFilterBox");
+      var selectedMarkaz = getSelected("markazFilterBox");
+
+      var bounds = [];
+      var stats = createEmptyStats();
+
+      schools.forEach(s => {
+        if(
+          selectedTehsils.includes(s.tehsil) &&
+          selectedLevels.includes(s.level) &&
+          selectedGenders.includes(s.gender) &&
+          selectedCategories.includes(s.category) &&
+          selectedMarkaz.includes(s.markaz)
         ){
+          addSchoolMarker(s, bounds);
+          updateSchoolStats(stats, s);
+        }
+      });
 
+      if(bounds.length > 1) map.fitBounds(bounds);
+      else if(bounds.length === 1) map.setView(bounds[0], 14);
+
+      updateStats(stats);
+      updateLabels();
+      updateLegend();
+    }
+
+    function clearMarkers(){
+      markers.forEach(marker => map.removeLayer(marker));
+      markers = [];
+    }
+
+    function createEmptyStats(){
+      return {
+        total: 0,
+        male: 0,
+        female: 0,
+        primary: 0,
+        middle: 0,
+        secondary: 0,
+        sed: 0,
+        psrp1: 0,
+        psrp2: 0,
+        markaz: {}
+      };
+    }
+
+    function updateSchoolStats(stats, s){
       stats.total++;
-      if(s.gender==="Male") stats.male++;
-if(s.gender==="Female") stats.female++;
 
-if(s.level==="Primary") stats.primary++;
-if(s.level==="Middle") stats.middle++;
-if(s.level==="Secondary") stats.secondary++;
+      if(s.gender === "Male") stats.male++;
+      if(s.gender === "Female") stats.female++;
 
-if(s.category==="SED") stats.sed++;
-if(s.category==="PSRP-I") stats.psrp1++;
-if(s.category==="PSRP-II") stats.psrp2++;
+      if(s.level === "Primary") stats.primary++;
+      if(s.level === "Middle") stats.middle++;
+      if(s.level === "Secondary") stats.secondary++;
 
-stats.markaz[s.markaz] = (stats.markaz[s.markaz] || 0) + 1;
+      if(s.category === "SED") stats.sed++;
+      if(s.category === "PSRP-I") stats.psrp1++;
+      if(s.category === "PSRP-II") stats.psrp2++;
 
-var color = getColor(s.markaz);
+      stats.markaz[s.markaz] = (stats.markaz[s.markaz] || 0) + 1;
+    }
 
-var marker = L.circleMarker([s.lat, s.lng], {
-  radius: 7,
-  fillColor: color,
-  color: "#000",
-  weight: 1,
-  fillOpacity: 0.9
-})
-.addTo(map)
-.bindPopup(
-  "<b>"+s.name+"</b><br>"+
-  "Tehsil: "+s.tehsil+"<br>"+
-  "Markaz: "+s.markaz+"<br>"+
-  "Level: "+s.level+"<br>"+
-  "Gender: "+s.gender+"<br>"+
-  "Category: "+s.category+"<br>"+
-  "Lat: "+s.lat+"<br>"+
-  "Lng: "+s.lng+"<br><br>"+
+    function addSchoolMarker(s, bounds){
+      var color = getColor(s.markaz, s.tehsil);
+      var marker;
 
-  "<a href='https://www.google.com/maps/dir/?api=1&destination="
-  +s.lat+","+s.lng+
-  "' target='_blank'>" +
+      if(s.category !== "SED"){
+        marker = L.marker([s.lat, s.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `
+              <div style="
+                width:16px;
+                height:16px;
+                background:${color};
+                border:0.1px solid black;
+                transform:rotate(45deg);
+              "></div>
+            `,
+            iconSize: [16, 16]
+          })
+        });
+      }
+      else if(s.level === "Middle"){
+        marker = L.circleMarker([s.lat, s.lng], {
+          radius: 10,
+          fillColor: color,
+          color: "#000",
+          weight: 3,
+          fillOpacity: 0.9
+        });
+      }
+      else{
+        marker = L.circleMarker([s.lat, s.lng], {
+          radius: 10,
+          fillColor: color,
+          color: "#000",
+          weight: 0.5,
+          fillOpacity: 0.9
+        });
+      }
 
-  "<button style='padding:6px 10px; cursor:pointer;'>Open in Google Maps</button></a>"
-)
-.bindTooltip(s.name,{permanent:false});
+      marker.school = s;
+      marker
+        .addTo(map)
+        .bindPopup(getPopupContent(s))
+        .bindTooltip(s.name, { permanent: false });
 
       markers.push(marker);
-      bounds.push([s.lat,s.lng]);
+      bounds.push([s.lat, s.lng]);
     }
 
-  });
-
-  if(bounds.length>1) map.fitBounds(bounds);
-  else if(bounds.length===1) map.setView(bounds[0],14);
-
-  updateStats(stats);
-  updateLabels();
-  updateLegend();
-}
-
-// LABEL CONTROL
-function updateLabels(){
-  var zoom = map.getZoom();
-
-  markers.forEach(m=>{
-    if(zoom >= 13) m.openTooltip();
-    else m.closeTooltip();
-  });
-}
-
-map.on("zoomend", updateLabels);
-
-// SEARCH
-function searchSchool(){
-
-  var q = searchBox.value.toLowerCase();
-
-  if(!q){
-    showSchools();
-    return;
-  }
-
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-
-  schools.forEach(s=>{
-    if(s.name.toLowerCase().includes(q)){
-      var m = L.marker([s.lat,s.lng])
-        .addTo(map)
-        .bindPopup(s.name)
-        .bindTooltip(s.name,{permanent:false});
-      markers.push(m);
+    function getPopupContent(s){
+      return (
+        "<b>" + s.name + "</b><br>" +
+        "Tehsil: " + s.tehsil + "<br>" +
+        "Markaz: " + s.markaz + "<br>" +
+        "Level: " + s.level + "<br>" +
+        "Gender: " + s.gender + "<br>" +
+        "Category: " + s.category + "<br>" +
+        "Lat: " + s.lat + "<br>" +
+        "Lng: " + s.lng + "<br><br>" +
+        "<div class='popup-actions'>" +
+        "<button onclick=\"copyCoords('" + s.lat + "," + s.lng + "')\">Copy</button>" +
+        "<a href='https://www.google.com/maps/dir/?api=1&destination=" +
+        s.lat + "," + s.lng +
+        "' target='_blank'>" +
+        "<button>Open in Google Maps</button></a>" +
+        "</div>"
+      );
     }
-  });
 
-  updateLabels();
-}
+    function updateLegend(){
+      var legend = document.getElementById("legend");
+      var visibleMarkaz = {};
 
-function clearSearch(){
-  searchBox.value="";
-  showSchools();
-}
+      legend.innerHTML = "<b>Markaz</b><br>";
 
-// DROPDOWN
-function toggleDropdown(id){
+      markers.forEach(function(marker){
+        if(marker.school){
+          visibleMarkaz[marker.school.markaz] = true;
+        }
+      });
 
-  var el = document.getElementById(id);
-  var isOpen = el.style.display === "block";
+      var sorted = Object.keys(visibleMarkaz).sort();
 
-  document.querySelectorAll(".dropdown-content")
-    .forEach(d => d.style.display = "none");
+      if(sorted.length === 0){
+        legend.innerHTML += "<i>No Markaz visible</i>";
+        return;
+      }
 
-  if(!isOpen){
-    el.style.display = "block";
-  }
-}
+      sorted.forEach(function(markaz){
+        var color = markazColors[markaz];
 
-document.addEventListener("click", function(e){
-  if(!e.target.closest(".dropdown")){
-    document.querySelectorAll(".dropdown-content")
-      .forEach(d => d.style.display = "none");
-  }
-});
+        if(color){
+          legend.innerHTML += `
+            <div class="legend-item">
+              <div class="legend-color" style="background:${color}"></div>
+              ${markaz}
+            </div>
+          `;
+        }
+      });
+    }
 
-// COPY
-function copyCoords(t){
-  navigator.clipboard.writeText(t);
-}
+    function updateLabels(){
+      var zoom = map.getZoom();
 
-// STATS
-function updateStats(s){
+      markers.forEach(marker => {
+        if(zoom >= 13) marker.openTooltip();
+        else marker.closeTooltip();
+      });
+    }
 
-  var genderTotal = s.male + s.female;
-  var levelTotal = s.primary + s.middle + s.secondary;
-  var categoryTotal = s.sed + s.psrp1 + s.psrp2;
+    map.on("zoomend", updateLabels);
 
-  var html = `
-  <b>Total Schools:</b> ${s.total}<br><br>
+    function searchSchool(){
+      var q = document.getElementById("searchBox").value.trim().toLowerCase();
 
-  <b>Gender Total (${genderTotal}):</b><br>
-  Male: ${s.male}<br>
-  Female: ${s.female}<br><br>
+      if(!q){
+        showSchools();
+        return;
+      }
 
-  <b>Level Total (${levelTotal}):</b><br>
-  Primary: ${s.primary}<br>
-  Middle: ${s.middle}<br>
-  Secondary: ${s.secondary}<br><br>
+      clearMarkers();
+      markazColors = {};
 
-  <b>Category Total (${categoryTotal}):</b><br>
-  SED: ${s.sed}<br>
-  PSRP-I: ${s.psrp1}<br>
-  PSRP-II: ${s.psrp2}<br><br>
+      var bounds = [];
 
-  <b>Markaz-wise Total (${s.total}):</b><br>
-  `;
+      schools.forEach(s => {
+        if(s.name.toLowerCase().includes(q)){
+          addSchoolMarker(s, bounds);
+        }
+      });
 
-  for(var m in s.markaz){
-    html += `${m}: ${s.markaz[m]}<br>`;
-  }
+      if(bounds.length > 1) map.fitBounds(bounds);
+      else if(bounds.length === 1) map.setView(bounds[0], 14);
 
-  document.getElementById("statsBox").innerHTML = html;
-}
+      updateLabels();
+      updateLegend();
+    }
 
-</script>
+    function clearSearch(){
+      document.getElementById("searchBox").value = "";
+      showSchools();
+    }
 
+    function toggleDropdown(id){
+      var el = document.getElementById(id);
+      var isOpen = el.style.display === "block";
+
+      document.querySelectorAll(".dropdown-content")
+        .forEach(dropdown => dropdown.style.display = "none");
+
+      if(!isOpen){
+        el.style.display = "block";
+      }
+    }
+
+    document.addEventListener("click", function(e){
+      if(!e.target.closest(".dropdown")){
+        document.querySelectorAll(".dropdown-content")
+          .forEach(dropdown => dropdown.style.display = "none");
+      }
+    });
+
+    function copyCoords(text){
+      navigator.clipboard.writeText(text);
+    }
+
+    function updateStats(s){
+      var genderTotal = s.male + s.female;
+      var levelTotal = s.primary + s.middle + s.secondary;
+      var categoryTotal = s.sed + s.psrp1 + s.psrp2;
+
+      var html = `
+        <b>Total Schools:</b> ${s.total}<br><br>
+
+        <b>Gender Total (${genderTotal}):</b><br>
+        Male: ${s.male}<br>
+        Female: ${s.female}<br><br>
+
+        <b>Level Total (${levelTotal}):</b><br>
+        Primary: ${s.primary}<br>
+        Middle: ${s.middle}<br>
+        Secondary: ${s.secondary}<br><br>
+
+        <b>Category Total (${categoryTotal}):</b><br>
+        SED: ${s.sed}<br>
+        PSRP-I: ${s.psrp1}<br>
+        PSRP-II: ${s.psrp2}<br><br>
+
+        <b>Markaz-wise Total (${s.total}):</b><br>
+      `;
+
+      Object.keys(s.markaz).sort().forEach(markaz => {
+        html += `${markaz}: ${s.markaz[markaz]}<br>`;
+      });
+
+      document.getElementById("statsBox").innerHTML = html;
+    }
+  </script>
 </body>
 </html>
