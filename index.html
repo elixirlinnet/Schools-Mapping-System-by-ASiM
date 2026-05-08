@@ -216,6 +216,7 @@
   <div class="stats" id="statsBox"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="schools-data.js"></script>
 
   <script>
     var map = L.map("map", {
@@ -232,6 +233,7 @@
     var schools = [];
     var markers = [];
     var markazColors = {};
+    var tehsilColors = {};
 
     map.on("click", function(e){
       var lat = e.latlng.lat.toFixed(6);
@@ -255,43 +257,59 @@
         .openOn(map);
     });
 
-    fetch("schools.csv")
-      .then(response => response.text())
-      .then(data => {
-        var rows = parseCsv(data);
+    loadSchools();
 
-        rows.slice(1).forEach(row => {
-          var c = row.map(value => value.trim());
-
-          if(c.length >= 8){
-            var lat = parseFloat(c[6]);
-            var lng = parseFloat(c[7]);
-
-            if(!isNaN(lat) && !isNaN(lng)){
-              schools.push({
-                tehsil: c[0],
-                markaz: c[1],
-                name: c[2],
-                gender: c[3],
-                level: c[4],
-                category: c[5],
-                lat: lat,
-                lng: lng
-              });
-            }
+    function loadSchools(){
+      fetch("schools.csv")
+        .then(response => {
+          if(!response.ok) throw new Error("HTTP " + response.status);
+          return response.text();
+        })
+        .then(loadSchoolsFromCsv)
+        .catch(error => {
+          if(window.SCHOOLS_CSV){
+            loadSchoolsFromCsv(window.SCHOOLS_CSV);
+            return;
           }
+
+          document.getElementById("statsBox").innerHTML =
+            "Unable to load schools.csv: " + error.message;
         });
+    }
 
-        orderedMarkaz = [...new Set(schools.map(s => s.markaz))].sort();
+    function loadSchoolsFromCsv(data){
+      var rows = parseCsv(data);
 
-        populateFilters();
-        updateMarkazFilter();
-        showSchools();
-      })
-      .catch(error => {
-        document.getElementById("statsBox").innerHTML =
-          "Unable to load schools.csv: " + error.message;
+      schools = [];
+
+      rows.slice(1).forEach(row => {
+        var c = row.map(value => value.trim());
+
+        if(c.length >= 8){
+          var lat = parseFloat(c[6]);
+          var lng = parseFloat(c[7]);
+
+          if(!isNaN(lat) && !isNaN(lng)){
+            schools.push({
+              tehsil: c[0],
+              markaz: c[1],
+              name: c[2],
+              gender: c[3],
+              level: c[4],
+              category: c[5],
+              lat: lat,
+              lng: lng
+            });
+          }
+        }
       });
+
+      orderedMarkaz = [...new Set(schools.map(s => s.markaz))].sort();
+
+      populateFilters();
+      updateMarkazFilter();
+      showSchools();
+    }
 
     function parseCsv(text){
       var rows = [];
@@ -461,33 +479,40 @@
     }
 
     function getColor(markaz, tehsil){
+      var selectedTehsils = getSelected("tehsilFilterBox");
+
+      if(selectedTehsils.length > 1){
+        return getTehsilColor(tehsil);
+      }
+
       if(!markazColors[markaz]){
-        var selectedTehsils = getSelected("tehsilFilterBox");
         var index = orderedMarkaz.indexOf(markaz);
-
-        if(selectedTehsils.length <= 1){
-          var hue = (index * 137) % 360;
-          markazColors[markaz] = `hsl(${hue}, 70%, 45%)`;
-        }
-        else{
-          var baseHue = 0;
-
-          if(tehsil === "KHUSHAB") baseHue = 220;
-          else if(tehsil === "NOORPUR") baseHue = 120;
-          else if(tehsil === "QUAIDABAD") baseHue = 0;
-          else if(tehsil === "NAUSHEHRA") baseHue = 280;
-
-          var lightness = 35 + ((index * 7) % 30);
-          markazColors[markaz] = `hsl(${baseHue}, 65%, ${lightness}%)`;
-        }
+        var hue = (index * 137) % 360;
+        markazColors[markaz] = `hsl(${hue}, 70%, 45%)`;
       }
 
       return markazColors[markaz];
     }
 
+    function getTehsilColor(tehsil){
+      if(!tehsilColors[tehsil]){
+        var hue = 0;
+
+        if(tehsil === "KHUSHAB") hue = 220;
+        else if(tehsil === "NOORPUR") hue = 120;
+        else if(tehsil === "QUAIDABAD") hue = 0;
+        else if(tehsil === "NAUSHEHRA") hue = 280;
+
+        tehsilColors[tehsil] = `hsl(${hue}, 65%, 45%)`;
+      }
+
+      return tehsilColors[tehsil];
+    }
+
     function showSchools(){
       clearMarkers();
       markazColors = {};
+      tehsilColors = {};
 
       var selectedTehsils = getSelected("tehsilFilterBox");
       var selectedLevels = getSelected("levelFilterBox");
@@ -527,14 +552,10 @@
     function createEmptyStats(){
       return {
         total: 0,
-        male: 0,
-        female: 0,
-        primary: 0,
-        middle: 0,
-        secondary: 0,
-        sed: 0,
-        psrp1: 0,
-        psrp2: 0,
+        gender: {},
+        level: {},
+        category: {},
+        tehsil: {},
         markaz: {}
       };
     }
@@ -542,17 +563,10 @@
     function updateSchoolStats(stats, s){
       stats.total++;
 
-      if(s.gender === "Male") stats.male++;
-      if(s.gender === "Female") stats.female++;
-
-      if(s.level === "Primary") stats.primary++;
-      if(s.level === "Middle") stats.middle++;
-      if(s.level === "Secondary") stats.secondary++;
-
-      if(s.category === "SED") stats.sed++;
-      if(s.category === "PSRP-I") stats.psrp1++;
-      if(s.category === "PSRP-II") stats.psrp2++;
-
+      stats.gender[s.gender] = (stats.gender[s.gender] || 0) + 1;
+      stats.level[s.level] = (stats.level[s.level] || 0) + 1;
+      stats.category[s.category] = (stats.category[s.category] || 0) + 1;
+      stats.tehsil[s.tehsil] = (stats.tehsil[s.tehsil] || 0) + 1;
       stats.markaz[s.markaz] = (stats.markaz[s.markaz] || 0) + 1;
     }
 
@@ -628,24 +642,52 @@
 
     function updateLegend(){
       var legend = document.getElementById("legend");
+      var selectedTehsils = getSelected("tehsilFilterBox");
+      var showTehsilLegend = selectedTehsils.length > 1;
+      var visibleTehsils = {};
       var visibleMarkaz = {};
 
-      legend.innerHTML = "<b>Markaz</b><br>";
+      legend.innerHTML = showTehsilLegend ? "<b>Tehsil</b><br>" : "<b>Markaz</b><br>";
 
       markers.forEach(function(marker){
         if(marker.school){
+          visibleTehsils[marker.school.tehsil] = true;
           visibleMarkaz[marker.school.markaz] = true;
         }
       });
 
-      var sorted = Object.keys(visibleMarkaz).sort();
+      if(showTehsilLegend){
+        var sortedTehsils = getFilterOrder("tehsilFilterBox")
+          .filter(tehsil => visibleTehsils[tehsil]);
 
-      if(sorted.length === 0){
+        if(sortedTehsils.length === 0){
+          legend.innerHTML += "<i>No Tehsil visible</i>";
+          return;
+        }
+
+        sortedTehsils.forEach(function(tehsil){
+          var color = getTehsilColor(tehsil);
+
+          legend.innerHTML += `
+            <div class="legend-item">
+              <div class="legend-color" style="background:${color}"></div>
+              ${tehsil}
+            </div>
+          `;
+        });
+
+        return;
+      }
+
+      var sortedMarkaz = getFilterOrder("markazFilterBox")
+        .filter(markaz => visibleMarkaz[markaz]);
+
+      if(sortedMarkaz.length === 0){
         legend.innerHTML += "<i>No Markaz visible</i>";
         return;
       }
 
-      sorted.forEach(function(markaz){
+      sortedMarkaz.forEach(function(markaz){
         var color = markazColors[markaz];
 
         if(color){
@@ -680,6 +722,7 @@
 
       clearMarkers();
       markazColors = {};
+      tehsilColors = {};
 
       var bounds = [];
 
@@ -725,35 +768,68 @@
     }
 
     function updateStats(s){
-      var genderTotal = s.male + s.female;
-      var levelTotal = s.primary + s.middle + s.secondary;
-      var categoryTotal = s.sed + s.psrp1 + s.psrp2;
+      var genderTotal = getStatsTotal(s.gender);
+      var levelTotal = getStatsTotal(s.level);
+      var categoryTotal = getStatsTotal(s.category);
 
       var html = `
         <b>Total Schools:</b> ${s.total}<br><br>
 
-        <b>Gender Total (${genderTotal}):</b><br>
-        Male: ${s.male}<br>
-        Female: ${s.female}<br><br>
-
-        <b>Level Total (${levelTotal}):</b><br>
-        Primary: ${s.primary}<br>
-        Middle: ${s.middle}<br>
-        Secondary: ${s.secondary}<br><br>
-
-        <b>Category Total (${categoryTotal}):</b><br>
-        SED: ${s.sed}<br>
-        PSRP-I: ${s.psrp1}<br>
-        PSRP-II: ${s.psrp2}<br><br>
-
-        <b>Markaz-wise Total (${s.total}):</b><br>
+        <b>Tehsil Total (${s.total}):</b><br>
       `;
 
-      Object.keys(s.markaz).sort().forEach(markaz => {
-        html += `${markaz}: ${s.markaz[markaz]}<br>`;
+      getFilterOrder("tehsilFilterBox").forEach(tehsil => {
+        html += `${tehsil}: ${s.tehsil[tehsil] || 0}<br>`;
       });
 
+      html += `<br>
+        <b>Markaz Total (${s.total}):</b><br>
+      `;
+
+      getFilterOrder("markazFilterBox").forEach(markaz => {
+        html += `${markaz}: ${s.markaz[markaz] || 0}<br>`;
+      });
+
+      html += `<br>
+        <b>Gender Total (${genderTotal}):</b><br>
+      `;
+
+      html += renderStatsByOrder(s.gender, getFilterOrder("genderFilterBox"));
+      html += `<br>
+
+        <b>Level Total (${levelTotal}):</b><br>
+      `;
+
+      html += renderStatsByOrder(s.level, getFilterOrder("levelFilterBox"));
+      html += `<br>
+
+        <b>Category Total (${categoryTotal}):</b><br>
+      `;
+
+      html += renderStatsByOrder(s.category, getFilterOrder("categoryFilterBox"));
+
       document.getElementById("statsBox").innerHTML = html;
+    }
+
+    function getStatsTotal(stats){
+      return Object.keys(stats).reduce(function(total, key){
+        return total + stats[key];
+      }, 0);
+    }
+
+    function renderStatsByOrder(stats, order){
+      var html = "";
+
+      order.forEach(function(value){
+        html += `${value}: ${stats[value] || 0}<br>`;
+      });
+
+      return html;
+    }
+
+    function getFilterOrder(id){
+      return [...document.querySelectorAll("#" + id + " input")]
+        .map(input => input.value);
     }
   </script>
 </body>
