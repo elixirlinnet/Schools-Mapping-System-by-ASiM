@@ -377,9 +377,11 @@
       Object.keys(sets).forEach(id => {
         var container = document.getElementById(id);
 
-        addFilterButtons(container, function(){
+        addFilterButtons(container, function(action){
           if(id === "tehsilFilterBox"){
-            updateMarkazFilter();
+            updateMarkazFilter({
+              selectAllVisible: action === "selectAll"
+            });
           }
 
           showSchools();
@@ -388,7 +390,9 @@
         [...sets[id]].sort().forEach(val => {
           addCheckbox(container, val, true, function(){
             if(id === "tehsilFilterBox"){
-              updateMarkazFilter();
+              updateMarkazFilter({
+                addedTehsil: this.checked ? this.value : null
+              });
             }
 
             showSchools();
@@ -402,14 +406,14 @@
       btnAll.textContent = "Select All";
       btnAll.onclick = function(){
         container.querySelectorAll("input").forEach(cb => cb.checked = true);
-        onChange();
+        onChange("selectAll");
       };
 
       var btnNone = document.createElement("button");
       btnNone.textContent = "Clear All";
       btnNone.onclick = function(){
         container.querySelectorAll("input").forEach(cb => cb.checked = false);
-        onChange();
+        onChange("clearAll");
       };
 
       container.appendChild(btnAll);
@@ -435,7 +439,9 @@
         .map(x => x.value);
     }
 
-    function updateMarkazFilter(){
+    function updateMarkazFilter(options){
+      options = options || {};
+
       var selectedTehsils = getSelected("tehsilFilterBox");
       var selectedMarkaz = new Set(getSelected("markazFilterBox"));
       var markazContainer = document.getElementById("markazFilterBox");
@@ -456,7 +462,14 @@
       });
 
       [...filteredMarkaz].sort().forEach(val => {
-        var shouldKeepSelection = selectedMarkaz.size === 0 || selectedMarkaz.has(val);
+        var belongsToAddedTehsil = options.addedTehsil && schools.some(function(s){
+          return s.tehsil === options.addedTehsil && s.markaz === val;
+        });
+        var shouldKeepSelection =
+          options.selectAllVisible ||
+          selectedMarkaz.size === 0 ||
+          selectedMarkaz.has(val) ||
+          belongsToAddedTehsil;
 
         addCheckbox(markazContainer, val, shouldKeepSelection, function(){
           syncTehsilWithMarkaz();
@@ -499,9 +512,9 @@
         var hue = 0;
 
         if(tehsil === "KHUSHAB") hue = 220;
-        else if(tehsil === "NOORPUR") hue = 120;
-        else if(tehsil === "QUAIDABAD") hue = 0;
-        else if(tehsil === "NAUSHEHRA") hue = 280;
+        else if(tehsil === "NOORPUR THAL") hue = 120;
+        else if(tehsil === "QUAIDABAD") hue = 25;
+        else if(tehsil === "NAUSHEHRA") hue = 285;
 
         tehsilColors[tehsil] = `hsl(${hue}, 65%, 45%)`;
       }
@@ -514,6 +527,7 @@
       markazColors = {};
       tehsilColors = {};
 
+      var searchQuery = getSearchQuery();
       var selectedTehsils = getSelected("tehsilFilterBox");
       var selectedLevels = getSelected("levelFilterBox");
       var selectedGenders = getSelected("genderFilterBox");
@@ -525,6 +539,7 @@
 
       schools.forEach(s => {
         if(
+          matchesSearch(s, searchQuery) &&
           selectedTehsils.includes(s.tehsil) &&
           selectedLevels.includes(s.level) &&
           selectedGenders.includes(s.gender) &&
@@ -713,35 +728,78 @@
     map.on("zoomend", updateLabels);
 
     function searchSchool(){
-      var q = document.getElementById("searchBox").value.trim().toLowerCase();
+      var q = getSearchQuery();
 
       if(!q){
         showSchools();
         return;
       }
 
-      clearMarkers();
-      markazColors = {};
-      tehsilColors = {};
-
-      var bounds = [];
-
-      schools.forEach(s => {
-        if(s.name.toLowerCase().includes(q)){
-          addSchoolMarker(s, bounds);
-        }
-      });
-
-      if(bounds.length > 1) map.fitBounds(bounds);
-      else if(bounds.length === 1) map.setView(bounds[0], 14);
-
-      updateLabels();
-      updateLegend();
+      syncFiltersToSchools(getSearchResults(q));
+      showSchools();
     }
 
     function clearSearch(){
       document.getElementById("searchBox").value = "";
+      selectAllFilters();
       showSchools();
+    }
+
+    function getSearchQuery(){
+      return document.getElementById("searchBox").value.trim().toLowerCase();
+    }
+
+    function matchesSearch(s, q){
+      return !q || s.name.toLowerCase().includes(q);
+    }
+
+    function getSearchResults(q){
+      return schools.filter(function(s){
+        return matchesSearch(s, q);
+      });
+    }
+
+    function syncFiltersToSchools(matchingSchools){
+      var values = {
+        tehsilFilterBox: new Set(),
+        markazFilterBox: new Set(),
+        genderFilterBox: new Set(),
+        levelFilterBox: new Set(),
+        categoryFilterBox: new Set()
+      };
+
+      matchingSchools.forEach(function(s){
+        values.tehsilFilterBox.add(s.tehsil);
+        values.markazFilterBox.add(s.markaz);
+        values.genderFilterBox.add(s.gender);
+        values.levelFilterBox.add(s.level);
+        values.categoryFilterBox.add(s.category);
+      });
+
+      setCheckedByValues("tehsilFilterBox", values.tehsilFilterBox);
+      updateMarkazFilter();
+      setCheckedByValues("markazFilterBox", values.markazFilterBox);
+      setCheckedByValues("genderFilterBox", values.genderFilterBox);
+      setCheckedByValues("levelFilterBox", values.levelFilterBox);
+      setCheckedByValues("categoryFilterBox", values.categoryFilterBox);
+    }
+
+    function setCheckedByValues(id, values){
+      document.querySelectorAll("#" + id + " input").forEach(function(cb){
+        cb.checked = values.has(cb.value);
+      });
+    }
+
+    function selectAllFilters(){
+      ["tehsilFilterBox", "genderFilterBox", "levelFilterBox", "categoryFilterBox"].forEach(function(id){
+        document.querySelectorAll("#" + id + " input").forEach(function(cb){
+          cb.checked = true;
+        });
+      });
+
+      updateMarkazFilter({
+        selectAllVisible: true
+      });
     }
 
     function toggleDropdown(id){
