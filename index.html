@@ -109,6 +109,16 @@
       vertical-align: middle;
     }
 
+    .filter-summary {
+      background: #f8f9fb;
+      border: 1px solid #dfe4ea;
+      border-radius: 6px;
+      color: #2f3542;
+      font-size: 13px;
+      line-height: 1.4;
+      padding: 8px 10px;
+    }
+
     #map {
       height: calc(100vh - 260px);
       min-height: 320px;
@@ -167,6 +177,22 @@
       padding: 6px 10px;
       font-size: 12px;
     }
+
+    .searched-marker {
+      animation: markerPulse 1.4s ease-in-out infinite;
+      filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.9));
+    }
+
+    @keyframes markerPulse {
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.75);
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(255, 193, 7, 0);
+      }
+    }
   </style>
 </head>
 
@@ -209,6 +235,8 @@
         <div id="categoryFilterBox" class="dropdown-content"></div>
       </div>
     </div>
+
+    <div class="filter-summary" id="filterSummary">Showing 0 schools</div>
   </div>
 
   <div id="map"></div>
@@ -426,17 +454,26 @@
 
       cb.type = "checkbox";
       cb.value = value;
+      cb.dataset.label = value;
       cb.checked = checked;
       cb.onchange = onChange;
 
       label.appendChild(cb);
-      label.append(" " + value);
+      label.appendChild(document.createTextNode(" "));
+      label.appendChild(createFilterLabelText(value));
       container.appendChild(label);
     }
 
     function getSelected(id){
       return [...document.querySelectorAll("#" + id + " input:checked")]
         .map(x => x.value);
+    }
+
+    function createFilterLabelText(value){
+      var span = document.createElement("span");
+      span.className = "filter-label-text";
+      span.textContent = value;
+      return span;
     }
 
     function updateMarkazFilter(options){
@@ -528,6 +565,7 @@
       tehsilColors = {};
 
       var searchQuery = getSearchQuery();
+      var searchActive = searchQuery.length > 0;
       var selectedTehsils = getSelected("tehsilFilterBox");
       var selectedLevels = getSelected("levelFilterBox");
       var selectedGenders = getSelected("genderFilterBox");
@@ -536,7 +574,6 @@
 
       var bounds = [];
       var stats = createEmptyStats();
-
       schools.forEach(s => {
         if(
           matchesSearch(s, searchQuery) &&
@@ -546,7 +583,7 @@
           selectedCategories.includes(s.category) &&
           selectedMarkaz.includes(s.markaz)
         ){
-          addSchoolMarker(s, bounds);
+          addSchoolMarker(s, bounds, searchActive);
           updateSchoolStats(stats, s);
         }
       });
@@ -555,6 +592,8 @@
       else if(bounds.length === 1) map.setView(bounds[0], 14);
 
       updateStats(stats);
+      updateFilterSummary(stats, searchQuery);
+      updateFilterCounts(searchQuery);
       updateLabels();
       updateLegend();
     }
@@ -585,7 +624,7 @@
       stats.markaz[s.markaz] = (stats.markaz[s.markaz] || 0) + 1;
     }
 
-    function addSchoolMarker(s, bounds){
+    function addSchoolMarker(s, bounds, highlight){
       var color = getColor(s.markaz, s.tehsil);
       var marker;
 
@@ -594,33 +633,33 @@
           icon: L.divIcon({
             className: "",
             html: `
-              <div style="
-                width:16px;
-                height:16px;
+              <div class="${highlight ? "searched-marker" : ""}" style="
+                width:${highlight ? 24 : 16}px;
+                height:${highlight ? 24 : 16}px;
                 background:${color};
-                border:0.1px solid black;
+                border:${highlight ? 3 : 0.1}px solid ${highlight ? "#ffc107" : "black"};
                 transform:rotate(45deg);
               "></div>
             `,
-            iconSize: [16, 16]
+            iconSize: [highlight ? 24 : 16, highlight ? 24 : 16]
           })
         });
       }
       else if(s.level === "Middle"){
         marker = L.circleMarker([s.lat, s.lng], {
-          radius: 10,
+          radius: highlight ? 15 : 10,
           fillColor: color,
-          color: "#000",
-          weight: 3,
+          color: highlight ? "#ffc107" : "#000",
+          weight: highlight ? 5 : 3,
           fillOpacity: 0.9
         });
       }
       else{
         marker = L.circleMarker([s.lat, s.lng], {
-          radius: 10,
+          radius: highlight ? 15 : 10,
           fillColor: color,
-          color: "#000",
-          weight: 0.5,
+          color: highlight ? "#ffc107" : "#000",
+          weight: highlight ? 5 : 0.5,
           fillOpacity: 0.9
         });
       }
@@ -726,6 +765,19 @@
     }
 
     map.on("zoomend", updateLabels);
+
+    document.getElementById("searchBox").addEventListener("input", function(){
+      var q = getSearchQuery();
+
+      if(q){
+        syncFiltersToSchools(getSearchResults(q));
+      }
+      else{
+        selectAllFilters();
+      }
+
+      showSchools();
+    });
 
     function searchSchool(){
       var q = getSearchQuery();
@@ -867,6 +919,91 @@
       html += renderStatsByOrder(s.category, getFilterOrder("categoryFilterBox"));
 
       document.getElementById("statsBox").innerHTML = html;
+    }
+
+    function updateFilterSummary(stats, searchQuery){
+      var parts = ["Showing " + stats.total + " school" + (stats.total === 1 ? "" : "s")];
+
+      if(searchQuery){
+        parts.push("Search: " + document.getElementById("searchBox").value.trim());
+      }
+
+      addSummaryPart(parts, "Tehsil", "tehsilFilterBox");
+      addSummaryPart(parts, "Markaz", "markazFilterBox");
+      addSummaryPart(parts, "Gender", "genderFilterBox");
+      addSummaryPart(parts, "Level", "levelFilterBox");
+      addSummaryPart(parts, "Category", "categoryFilterBox");
+
+      document.getElementById("filterSummary").textContent = parts.join(" | ");
+    }
+
+    function addSummaryPart(parts, label, id){
+      var inputs = [...document.querySelectorAll("#" + id + " input")];
+      var selected = inputs.filter(input => input.checked).map(input => input.value);
+
+      if(selected.length === 0){
+        parts.push(label + ": none");
+      }
+      else if(selected.length === 1){
+        parts.push(label + ": " + selected[0]);
+      }
+      else if(selected.length < inputs.length){
+        parts.push(label + ": " + selected.length + " selected");
+      }
+    }
+
+    function updateFilterCounts(searchQuery){
+      var configs = [
+        { id: "tehsilFilterBox", field: "tehsil" },
+        { id: "markazFilterBox", field: "markaz" },
+        { id: "genderFilterBox", field: "gender" },
+        { id: "levelFilterBox", field: "level" },
+        { id: "categoryFilterBox", field: "category" }
+      ];
+
+      configs.forEach(function(config){
+        var counts = getCountsForFilter(config, searchQuery);
+
+        document.querySelectorAll("#" + config.id + " input").forEach(function(input){
+          var label = input.parentElement.querySelector(".filter-label-text");
+
+          if(label){
+            label.textContent = input.value + " (" + (counts[input.value] || 0) + ")";
+          }
+        });
+      });
+    }
+
+    function getCountsForFilter(config, searchQuery){
+      var selected = {
+        tehsil: getSelected("tehsilFilterBox"),
+        markaz: getSelected("markazFilterBox"),
+        gender: getSelected("genderFilterBox"),
+        level: getSelected("levelFilterBox"),
+        category: getSelected("categoryFilterBox")
+      };
+      var counts = {};
+
+      schools.forEach(function(s){
+        if(
+          matchesSearch(s, searchQuery) &&
+          matchesOtherFilters(s, selected, config.field)
+        ){
+          counts[s[config.field]] = (counts[s[config.field]] || 0) + 1;
+        }
+      });
+
+      return counts;
+    }
+
+    function matchesOtherFilters(s, selected, ignoredField){
+      return (
+        (ignoredField === "tehsil" || selected.tehsil.includes(s.tehsil)) &&
+        (ignoredField === "markaz" || selected.markaz.includes(s.markaz)) &&
+        (ignoredField === "gender" || selected.gender.includes(s.gender)) &&
+        (ignoredField === "level" || selected.level.includes(s.level)) &&
+        (ignoredField === "category" || selected.category.includes(s.category))
+      );
     }
 
     function getStatsTotal(stats){
