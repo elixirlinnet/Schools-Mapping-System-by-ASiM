@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "update-data": "node update-data.js"
+  }
+}

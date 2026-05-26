@@ -759,7 +759,7 @@
       var zoom = map.getZoom();
 
       markers.forEach(marker => {
-        if(zoom >= 13) marker.openTooltip();
+        if(zoom >= 13 && map.hasLayer(marker)) marker.openTooltip();
         else marker.closeTooltip();
       });
     }
