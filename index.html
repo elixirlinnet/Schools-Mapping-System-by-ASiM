@@ -41,6 +41,27 @@
     .row {
       display: flex;
       gap: 6px;
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+
+    .search-row {
+      flex-wrap: nowrap;
+    }
+
+    .search-row input {
+      flex: 1 1 260px;
+      min-width: 0;
+    }
+
+    .search-row button {
+      flex: 0 0 110px;
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 6px;
     }
 
     input,
@@ -67,6 +88,7 @@
     .dropdown {
       position: relative;
       width: 100%;
+      min-width: 0;
     }
 
     .dropdown-content {
@@ -124,6 +146,7 @@
       min-height: 320px;
     }
 
+
     .stats {
       background: white;
       padding: 10px;
@@ -153,20 +176,61 @@
       z-index: 1000;
     }
 
+    .legend-section {
+      border-top: 1px solid #e5e8ec;
+      margin-top: 8px;
+      padding-top: 8px;
+    }
+
+    .legend-section:first-child {
+      border-top: none;
+      margin-top: 0;
+      padding-top: 0;
+    }
+
     .legend-item {
       display: flex;
       align-items: center;
+      gap: 6px;
       margin-bottom: 4px;
     }
 
-    .legend-color {
+    .legend-color,
+    .legend-symbol {
       width: 14px;
       height: 14px;
-      border-radius: 50%;
-      margin-right: 6px;
       flex: 0 0 auto;
     }
 
+    .legend-color {
+      border-radius: 50%;
+    }
+
+    .legend-symbol {
+      display: inline-block;
+      background: #747d8c;
+      border: 1px solid #1e272e;
+      box-sizing: border-box;
+    }
+
+    .legend-symbol-circle {
+      border-radius: 50%;
+    }
+
+    .legend-symbol-middle {
+      border-radius: 50%;
+      border-width: 3px;
+    }
+
+    .legend-symbol-diamond {
+      transform: rotate(45deg) scale(0.86);
+    }
+
+    .legend-symbol-highlight {
+      background: #1e90ff;
+      border: 3px solid #ffc107;
+      box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.25);
+    }
     .popup-actions {
       display: flex;
       gap: 6px;
@@ -193,6 +257,78 @@
         box-shadow: 0 0 0 8px rgba(255, 193, 7, 0);
       }
     }
+
+    @media (max-width: 800px) {
+      .filter-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      #map {
+        height: calc(100vh - 300px);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .header {
+        padding: 10px;
+      }
+
+      .header h2 {
+        font-size: 18px;
+      }
+
+      .controls {
+        padding: 8px;
+      }
+
+      .search-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .search-row input {
+        grid-column: 1 / -1;
+      }
+
+      .search-row button {
+        flex-basis: auto;
+      }
+
+      .filter-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      input,
+      button {
+        min-height: 42px;
+      }
+
+      .dropdown-content {
+        max-height: 220px;
+      }
+
+
+      #map {
+        height: calc(100vh - 340px);
+        min-height: 280px;
+      }
+
+      #legend {
+        right: 8px;
+        bottom: 16px;
+        max-width: calc(100vw - 32px);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .filter-row {
+        grid-template-columns: 1fr;
+      }
+
+      #map {
+        height: calc(100vh - 420px);
+      }
+    }
   </style>
 </head>
 
@@ -203,35 +339,35 @@
   </div>
 
   <div class="controls">
-    <div class="row">
+    <div class="row search-row">
       <input type="text" id="searchBox" placeholder="Search school...">
       <button onclick="searchSchool()">Search</button>
       <button class="btn-secondary" onclick="clearSearch()">Clear</button>
     </div>
 
-    <div class="row">
+    <div class="row filter-row">
       <div class="dropdown">
-        <button onclick="toggleDropdown('tehsilFilterBox')">Tehsil &#9662;</button>
+        <button data-filter-button="tehsilFilterBox" onclick="toggleDropdown('tehsilFilterBox')">Tehsil &#9662;</button>
         <div id="tehsilFilterBox" class="dropdown-content"></div>
       </div>
 
       <div class="dropdown">
-        <button onclick="toggleDropdown('markazFilterBox')">Markaz &#9662;</button>
+        <button data-filter-button="markazFilterBox" onclick="toggleDropdown('markazFilterBox')">Markaz &#9662;</button>
         <div id="markazFilterBox" class="dropdown-content"></div>
       </div>
 
       <div class="dropdown">
-        <button onclick="toggleDropdown('genderFilterBox')">Gender &#9662;</button>
+        <button data-filter-button="genderFilterBox" onclick="toggleDropdown('genderFilterBox')">Gender &#9662;</button>
         <div id="genderFilterBox" class="dropdown-content"></div>
       </div>
 
       <div class="dropdown">
-        <button onclick="toggleDropdown('levelFilterBox')">Level &#9662;</button>
+        <button data-filter-button="levelFilterBox" onclick="toggleDropdown('levelFilterBox')">Level &#9662;</button>
         <div id="levelFilterBox" class="dropdown-content"></div>
       </div>
 
       <div class="dropdown">
-        <button onclick="toggleDropdown('categoryFilterBox')">Category &#9662;</button>
+        <button data-filter-button="categoryFilterBox" onclick="toggleDropdown('categoryFilterBox')">Category &#9662;</button>
         <div id="categoryFilterBox" class="dropdown-content"></div>
       </div>
     </div>
@@ -260,8 +396,17 @@
     var orderedMarkaz = [];
     var schools = [];
     var markers = [];
+    var schoolMarkers = new Map();
     var markazColors = {};
     var tehsilColors = {};
+
+    var FILTER_LABELS = {
+      tehsilFilterBox: "Tehsil",
+      markazFilterBox: "Markaz",
+      genderFilterBox: "Gender",
+      levelFilterBox: "Level",
+      categoryFilterBox: "Category"
+    };
 
     map.on("click", function(e){
       var lat = e.latlng.lat.toFixed(6);
@@ -574,6 +719,7 @@
 
       var bounds = [];
       var stats = createEmptyStats();
+      var visibleSchools = [];
       schools.forEach(s => {
         if(
           matchesSearch(s, searchQuery) &&
@@ -594,6 +740,7 @@
       updateStats(stats);
       updateFilterSummary(stats, searchQuery);
       updateFilterCounts(searchQuery);
+      updateFilterButtonLabels();
       updateLabels();
       updateLegend();
     }
@@ -601,6 +748,7 @@
     function clearMarkers(){
       markers.forEach(marker => map.removeLayer(marker));
       markers = [];
+      schoolMarkers.clear();
     }
 
     function createEmptyStats(){
@@ -701,8 +849,6 @@
       var visibleTehsils = {};
       var visibleMarkaz = {};
 
-      legend.innerHTML = showTehsilLegend ? "<b>Tehsil</b><br>" : "<b>Markaz</b><br>";
-
       markers.forEach(function(marker){
         if(marker.school){
           visibleTehsils[marker.school.tehsil] = true;
@@ -710,51 +856,63 @@
         }
       });
 
+      var html = `<div class="legend-section"><b>${showTehsilLegend ? "Tehsil" : "Markaz"}</b><br>`;
+
       if(showTehsilLegend){
         var sortedTehsils = getFilterOrder("tehsilFilterBox")
           .filter(tehsil => visibleTehsils[tehsil]);
 
         if(sortedTehsils.length === 0){
-          legend.innerHTML += "<i>No Tehsil visible</i>";
-          return;
+          html += "<i>No Tehsil visible</i>";
         }
+        else{
+          sortedTehsils.forEach(function(tehsil){
+            var color = getTehsilColor(tehsil);
 
-        sortedTehsils.forEach(function(tehsil){
-          var color = getTehsilColor(tehsil);
+            html += `
+              <div class="legend-item">
+                <div class="legend-color" style="background:${color}"></div>
+                ${tehsil}
+              </div>
+            `;
+          });
+        }
+      }
+      else{
+        var sortedMarkaz = getFilterOrder("markazFilterBox")
+          .filter(markaz => visibleMarkaz[markaz]);
 
-          legend.innerHTML += `
-            <div class="legend-item">
-              <div class="legend-color" style="background:${color}"></div>
-              ${tehsil}
-            </div>
-          `;
-        });
+        if(sortedMarkaz.length === 0){
+          html += "<i>No Markaz visible</i>";
+        }
+        else{
+          sortedMarkaz.forEach(function(markaz){
+            var color = markazColors[markaz];
 
-        return;
+            if(color){
+              html += `
+                <div class="legend-item">
+                  <div class="legend-color" style="background:${color}"></div>
+                  ${markaz}
+                </div>
+              `;
+            }
+          });
+        }
       }
 
-      var sortedMarkaz = getFilterOrder("markazFilterBox")
-        .filter(markaz => visibleMarkaz[markaz]);
+      html += `
+        </div>
+        <div class="legend-section"><b>Marker Type</b><br>
+          <div class="legend-item"><span class="legend-symbol legend-symbol-circle"></span>SED Primary</div>
+          <div class="legend-item"><span class="legend-symbol legend-symbol-middle"></span>SED Middle</div>
+          <div class="legend-item"><span class="legend-symbol legend-symbol-diamond"></span>PSRP-I / PSRP-II</div>
+          <div class="legend-item"><span class="legend-symbol legend-symbol-circle legend-symbol-highlight"></span>Search match</div>
+        </div>
+      `;
 
-      if(sortedMarkaz.length === 0){
-        legend.innerHTML += "<i>No Markaz visible</i>";
-        return;
-      }
-
-      sortedMarkaz.forEach(function(markaz){
-        var color = markazColors[markaz];
-
-        if(color){
-          legend.innerHTML += `
-            <div class="legend-item">
-              <div class="legend-color" style="background:${color}"></div>
-              ${markaz}
-            </div>
-          `;
-        }
-      });
+      legend.innerHTML = html;
     }
-
     function updateLabels(){
       var zoom = map.getZoom();
 
@@ -935,6 +1093,19 @@
       addSummaryPart(parts, "Category", "categoryFilterBox");
 
       document.getElementById("filterSummary").textContent = parts.join(" | ");
+    }
+
+    function updateFilterButtonLabels(){
+      Object.keys(FILTER_LABELS).forEach(function(id){
+        var button = document.querySelector("[data-filter-button='" + id + "']");
+        var inputs = document.querySelectorAll("#" + id + " input");
+        var selected = getSelected(id).length;
+        var label = FILTER_LABELS[id];
+
+        if(button){
+          button.innerHTML = label + " (" + selected + ") &#9662;";
+        }
+      });
     }
 
     function addSummaryPart(parts, label, id){
