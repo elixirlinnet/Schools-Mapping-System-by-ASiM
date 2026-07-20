@@ -4,6 +4,7 @@ const path = require("path");
 const root = __dirname;
 const csvPath = path.join(root, "schools.csv");
 const fallbackPath = path.join(root, "schools-data.js");
+const parseCsv = require("./csv-parser.js");
 
 const VALID_TEHSILS = new Set([
   "KHUSHAB",
@@ -17,52 +18,6 @@ const VALID_CATEGORIES = new Set([
   "PSRP-I",
   "PSRP-II"
 ]);
-
-function parseCsv(text){
-  const rows = [];
-  let row = [];
-  let value = "";
-  let inQuotes = false;
-
-  for(let i = 0; i < text.length; i++){
-    const ch = text[i];
-    const next = text[i + 1];
-
-    if(ch === "\"" && inQuotes && next === "\""){
-      value += "\"";
-      i++;
-    }
-    else if(ch === "\""){
-      inQuotes = !inQuotes;
-    }
-    else if(ch === "," && !inQuotes){
-      row.push(value);
-      value = "";
-    }
-    else if((ch === "\n" || ch === "\r") && !inQuotes){
-      if(ch === "\r" && next === "\n") i++;
-      row.push(value);
-
-      if(row.some(cell => cell.trim() !== "")){
-        rows.push(row);
-      }
-
-      row = [];
-      value = "";
-    }
-    else{
-      value += ch;
-    }
-  }
-
-  row.push(value);
-
-  if(row.some(cell => cell.trim() !== "")){
-    rows.push(row);
-  }
-
-  return rows;
-}
 
 function addIssue(issues, type, line, message){
   issues.push({ type, line, message });
