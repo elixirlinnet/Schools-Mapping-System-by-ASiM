@@ -15,8 +15,11 @@ const VALID_TEHSILS = new Set([
 
 const VALID_CATEGORIES = new Set([
   "SED",
+  "PSRP",
   "PSRP-I",
-  "PSRP-II"
+  "PSRP-II",
+  "PSRP-III",
+  "PEIMA"
 ]);
 
 function addIssue(issues, type, line, message){
@@ -28,6 +31,7 @@ function validateCsv(text){
   const rows = parseCsv(text);
   const schoolKeys = new Map();
   const fullRows = new Map();
+  let withoutCoords = 0;
 
   text.split(/\r?\n/).forEach((line, index) => {
     if(line.startsWith("<<<<<<<") || line.startsWith("=======") || line.startsWith(">>>>>>>")){
@@ -49,18 +53,26 @@ function validateCsv(text){
     }
 
     const [tehsil, markaz, name, gender, level, category, latText, lngText] = c;
-    const lat = Number.parseFloat(latText);
-    const lng = Number.parseFloat(lngText);
+    const hasLat = latText !== "";
+    const hasLng = lngText !== "";
 
     if(!tehsil || !markaz || !name || !gender || !level || !category){
       addIssue(issues, "missing-field", line, "Required school field is blank.");
     }
 
-    if(!Number.isFinite(lat) || !Number.isFinite(lng)){
-      addIssue(issues, "missing-coordinates", line, "Latitude or longitude is missing or invalid.");
+    if(!hasLat && !hasLng){
+      withoutCoords++;
     }
-    else if(lat < -90 || lat > 90 || lng < -180 || lng > 180){
-      addIssue(issues, "invalid-coordinates", line, "Latitude or longitude is outside valid range.");
+    else{
+      const lat = Number.parseFloat(latText);
+      const lng = Number.parseFloat(lngText);
+
+      if(!hasLat || !hasLng || !Number.isFinite(lat) || !Number.isFinite(lng)){
+        addIssue(issues, "invalid-coordinates", line, "Latitude or longitude is incomplete or invalid.");
+      }
+      else if(lat < -90 || lat > 90 || lng < -180 || lng > 180){
+        addIssue(issues, "invalid-coordinates", line, "Latitude or longitude is outside valid range.");
+      }
     }
 
     if(tehsil && !VALID_TEHSILS.has(tehsil)){
@@ -89,7 +101,7 @@ function validateCsv(text){
     }
   });
 
-  return issues;
+  return { issues, withoutCoords };
 }
 
 function printIssues(issues){
@@ -114,7 +126,7 @@ function printIssues(issues){
 }
 
 const csv = fs.readFileSync(csvPath, "utf8");
-const issues = validateCsv(csv);
+const { issues, withoutCoords } = validateCsv(csv);
 
 if(issues.length > 0){
   printIssues(issues);
@@ -127,4 +139,7 @@ fs.writeFileSync(
 );
 
 console.log("CSV validation passed.");
+if(withoutCoords > 0){
+  console.log(`${withoutCoords} school(s) have no coordinates and will not appear on the map.`);
+}
 console.log("schools-data.js regenerated from schools.csv.");

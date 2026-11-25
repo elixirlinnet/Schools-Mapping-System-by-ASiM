@@ -558,7 +558,7 @@ function updateLegend(){
     <div class="legend-section"><b>Marker Type</b><br>
       <div class="legend-item"><span class="legend-symbol legend-symbol-circle"></span>SED Primary</div>
       <div class="legend-item"><span class="legend-symbol legend-symbol-middle"></span>SED Middle</div>
-      <div class="legend-item"><span class="legend-symbol legend-symbol-diamond"></span>PSRP-I / PSRP-II</div>
+      <div class="legend-item"><span class="legend-symbol legend-symbol-diamond"></span>PSRP / PEIMA</div>
       <div class="legend-item"><span class="legend-symbol legend-symbol-circle legend-symbol-highlight"></span>Search match</div>
     </div>
   `;
